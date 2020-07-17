@@ -28,7 +28,7 @@
     "import/no-unresolved": [
       "error",
       {
-        "ignore": ["meteor/*", "mongodb"]
+        "ignore": ["meteor/*"]
       }
     ],
     "import/order": [

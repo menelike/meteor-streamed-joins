@@ -1,11 +1,11 @@
 class ForeignKeyRegistry {
-  sourceToDrain: Record<string, Set<string>>;
+  private readonly sourceToDrain: Record<string, Set<string>>;
 
-  drainToSource: Record<string, Set<string>>;
+  private readonly drainToSource: Record<string, Set<string>>;
 
-  added: Set<string>;
+  public readonly added: Set<string>;
 
-  removed: Set<string>;
+  public readonly removed: Set<string>;
 
   constructor() {
     this.sourceToDrain = {};
@@ -14,7 +14,7 @@ class ForeignKeyRegistry {
     this.removed = new Set();
   }
 
-  replace(from: string, to: Array<string>): void {
+  public replace(from: string, to: Array<string>): void {
     const added = to.filter(
       (foreignKey) => !this.sourceToDrain[from].has(foreignKey)
     );
@@ -34,8 +34,11 @@ class ForeignKeyRegistry {
 
     to.forEach((foreignKey) => {
       if (this.drainToSource[foreignKey].size === 1) {
-        this.added.delete(foreignKey);
-        this.removed.add(foreignKey);
+        if (this.added.has(foreignKey)) {
+          this.added.delete(foreignKey);
+        } else {
+          this.removed.add(foreignKey);
+        }
         delete this.drainToSource[foreignKey];
       } else {
         this.drainToSource[foreignKey].delete(foreignKey);
@@ -43,7 +46,7 @@ class ForeignKeyRegistry {
     });
   }
 
-  add(from: string, to: Array<string>): void {
+  public add(from: string, to: Array<string>): void {
     if (!to.length) return;
 
     if (from in this.sourceToDrain) {
@@ -56,8 +59,11 @@ class ForeignKeyRegistry {
 
     to.forEach((foreignKey) => {
       if (!(foreignKey in this.drainToSource)) {
-        this.removed.delete(foreignKey);
-        this.added.add(foreignKey);
+        if (this.removed.has(foreignKey)) {
+          this.removed.delete(foreignKey);
+        } else {
+          this.added.add(foreignKey);
+        }
       }
 
       if (foreignKey in this.drainToSource) {
@@ -68,16 +74,16 @@ class ForeignKeyRegistry {
     });
   }
 
-  remove(from: string): void {
+  public remove(from: string): void {
     this._remove(from, [...this.sourceToDrain[from].values()]);
     delete this.sourceToDrain[from];
   }
 
-  hasForeignKey(foreignKey: string): boolean {
+  public hasForeignKey(foreignKey: string): boolean {
     return foreignKey in this.drainToSource;
   }
 
-  clear(): void {
+  public clear(): void {
     this.added.clear();
     this.removed.clear();
   }

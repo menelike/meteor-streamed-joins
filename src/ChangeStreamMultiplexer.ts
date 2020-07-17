@@ -6,7 +6,7 @@ import type {
   Collection,
 } from 'mongodb';
 
-import type { DefaultValue, MongoDoc, WatchObserveCallBack } from './types';
+import type { AnyValue, MongoDoc, WatchObserveCallBack } from './types';
 
 const STATIC_AGGREGATION_PIPELINE = [
   {
@@ -21,41 +21,23 @@ const STATIC_AGGREGATION_PIPELINE = [
   },
   {
     $addFields: {
-      'meteor.removedFieldsObject': {
-        $arrayToObject: {
-          $map: {
-            input: '$updateDescription.removedFields',
-            as: 'fieldName',
-            in: {
-              k: '$$fieldName',
-              v: undefined,
-            },
-          },
-        },
-      },
-    },
-  },
-  {
-    $addFields: {
       'meteor.fields': {
         $mergeObjects: [
           '$fullDocument', // use when replace
           '$updateDescription.updatedFields', // used when update
-          '$meteor.removedFieldsObject', // used when update
         ],
       },
     },
   },
   {
     $project: {
-      'meteor.removedFieldsObject': 0,
       'meteor.fields._id': 0,
     },
   },
 ];
 
 interface ChangeEventMeteorBase {
-  meteor: { fields: Record<string, DefaultValue> };
+  meteor: { fields: Record<string, AnyValue> };
 }
 
 interface ChangeEventCRMeteor
@@ -76,22 +58,23 @@ export type ChangeEventMeteor =
   | ChangeEventDeleteMeteor;
 
 class ChangeStreamMultiplexer {
-  listeners: Set<WatchObserveCallBack>;
+  private readonly listeners: Set<WatchObserveCallBack>;
 
-  collection: Collection;
+  private readonly collection: Collection;
 
-  changeStream: ChangeStream | undefined;
+  private changeStream: ChangeStream | undefined;
 
   constructor(collection: Collection) {
     this.listeners = new Set();
     this.collection = collection;
   }
 
-  isWatching(): boolean {
+  public isWatching(): boolean {
     return !!this.changeStream;
   }
 
-  startIfNeeded(): void {
+  private startIfNeeded(): void {
+    /* istanbul ignore else */
     if (this.listeners.size && !this.changeStream) {
       this.changeStream = this.collection.watch(STATIC_AGGREGATION_PIPELINE);
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -100,28 +83,44 @@ class ChangeStreamMultiplexer {
     }
   }
 
-  stopIfUseless(): void {
+  private stopIfUseless(): void {
+    /* istanbul ignore else */
     if (!this.listeners.size && this.changeStream) {
       this.changeStream.close();
       this.changeStream = undefined;
     }
   }
 
-  onChange = (next: ChangeEventMeteor): void => {
-    console.log(next);
+  private onChange = (next: ChangeEventMeteor): void => {
     const { _id } = next.documentKey;
     const { fields } = next.meteor;
     this.listeners.forEach((listener) => {
+      if (
+        next.operationType === 'update' &&
+        Array.isArray(next.updateDescription.removedFields)
+      ) {
+        // mongo doesn't support undefined
+        // otherwise this could have been done in the aggregation pipeline
+        next.updateDescription.removedFields.forEach((f) => {
+          fields[f] = undefined;
+        });
+      }
       listener.changed(_id, fields, next);
     });
   };
 
-  addListener = (listener: WatchObserveCallBack): void => {
+  // used in tests
+  public _stop(): void {
+    this.listeners.clear();
+    this.stopIfUseless();
+  }
+
+  public addListener = (listener: WatchObserveCallBack): void => {
     this.listeners.add(listener);
     this.startIfNeeded();
   };
 
-  removeListener = (listener: WatchObserveCallBack): void => {
+  public removeListener = (listener: WatchObserveCallBack): void => {
     this.listeners.delete(listener);
     this.stopIfUseless();
   };

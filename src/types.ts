@@ -1,11 +1,13 @@
 import type { ChangeEventMeteor } from './ChangeStreamMultiplexer';
 
-export type DefaultValue = never;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyValue = any;
 
-export type DefaultDoc = Record<string, DefaultValue>;
+export type DefaultDoc = Record<string, AnyValue>;
 
-export interface MongoDoc extends DefaultDoc {
+export interface MongoDoc {
   _id: string;
+  [key: string]: AnyValue;
 }
 
 export type MeteorObserverChanges<T = MongoDoc> = {
@@ -18,7 +20,7 @@ export interface WatchObserveCallBack {
   added(keys: string[]): void;
   changed(
     _id: string,
-    fields: Record<string, DefaultValue>,
+    fields: Record<string, AnyValue>,
     op: ChangeEventMeteor
   ): void;
   removed(keys: string[]): void;

@@ -1,4 +1,4 @@
-import type { DefaultDoc } from '../types';
+import type { DefaultDoc, AnyValue } from '../types';
 
 interface AllowedFields {
   [key: string]: 1;
@@ -10,32 +10,44 @@ interface DeniedFields {
 
 export type FieldProjection = AllowedFields | DeniedFields;
 
-const filterAllowedFields = <T extends { [key: string]: never } = DefaultDoc>(
+const filterAllowedFields = <
+  T extends { [key: string]: AnyValue } = DefaultDoc
+>(
   fieldOptions: AllowedFields,
   doc: T
 ): DefaultDoc => {
   const nextDoc: DefaultDoc = {};
   Object.keys(fieldOptions).forEach((k) => {
     Object.entries(doc).forEach(([f, v]) => {
-      if (f.startsWith(k)) nextDoc[f] = v;
+      if (f === k) nextDoc[f] = v;
+      else if (f.startsWith(`${k}.`)) nextDoc[f] = v;
     });
   });
   return nextDoc;
 };
 
-const filterDeniedFields = <T extends { [key: string]: never } = DefaultDoc>(
-  // eslint-disable-next-line no-unused-vars
+const filterDeniedFields = <T extends { [key: string]: AnyValue } = DefaultDoc>(
   fieldOptions: DeniedFields,
-  // eslint-disable-next-line no-unused-vars
   doc: T
 ): DefaultDoc => {
-  throw Error();
+  const nextDoc: DefaultDoc = {};
+  Object.entries(doc).forEach(([f, v]) => {
+    const fieldIsListed = Object.keys(fieldOptions).some((k) => {
+      return f === k || f.startsWith(`${k}.`);
+    });
+    if (!fieldIsListed) {
+      nextDoc[f] = v;
+    }
+  });
+  return nextDoc;
 };
 
-const filterFields = <T extends { [key: string]: never } = DefaultDoc>(
+const filterFields = <T extends { [key: string]: AnyValue } = DefaultDoc>(
   fieldOptions: FieldProjection,
   doc: T
 ): DefaultDoc => {
+  if (!Object.keys(fieldOptions).length) return doc;
+
   if (Object.values(fieldOptions).every((v) => v === 1)) {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore

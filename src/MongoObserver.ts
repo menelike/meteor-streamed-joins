@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
 
 import ForeignKeyRegistry from './ForeignKeyRegistry';
@@ -7,28 +8,30 @@ import type {
   WatchObserveCallBack,
 } from './types';
 
-type ObserveHandle = { stop: () => void };
-
 class MongoObserver {
-  foreignKeyRegistry: ForeignKeyRegistry;
+  public readonly foreignKeyRegistry: ForeignKeyRegistry;
 
-  firstRun: true | undefined;
+  private firstRun: true | undefined;
 
-  observeHandle: ObserveHandle | undefined;
+  private observeHandle: Meteor.LiveQueryHandle | undefined;
 
   constructor() {
     this.foreignKeyRegistry = new ForeignKeyRegistry();
   }
 
-  handleWatchObserver(watchObserveCallBack: WatchObserveCallBack): void {
-    if (this.foreignKeyRegistry.added.size)
+  private handleWatchObserver(
+    watchObserveCallBack: WatchObserveCallBack
+  ): void {
+    if (this.foreignKeyRegistry.added.size) {
       watchObserveCallBack.added([...this.foreignKeyRegistry.added]);
-    if (this.foreignKeyRegistry.removed.size)
+    }
+    if (this.foreignKeyRegistry.removed.size) {
       watchObserveCallBack.removed([...this.foreignKeyRegistry.removed]);
+    }
     this.foreignKeyRegistry.clear();
   }
 
-  observe(
+  public observe(
     cursor: Mongo.Cursor<MongoDoc>,
     observeChangesCallback: MeteorObserverChanges,
     watchObserveCallBack: WatchObserveCallBack
@@ -42,7 +45,7 @@ class MongoObserver {
       },
       changed: (newDoc: MongoDoc, oldDoc: MongoDoc) => {
         const tos = observeChangesCallback.changed(newDoc, oldDoc);
-        this.foreignKeyRegistry.add(newDoc._id, tos);
+        this.foreignKeyRegistry.replace(newDoc._id, tos);
         if (!this.firstRun) this.handleWatchObserver(watchObserveCallBack);
       },
       removed: (oldDoc: MongoDoc) => {
@@ -55,8 +58,11 @@ class MongoObserver {
     this.handleWatchObserver(watchObserveCallBack);
   }
 
-  stop(): void {
-    if (this.observeHandle) this.observeHandle.stop();
+  public stop(): void {
+    if (this.observeHandle) {
+      this.observeHandle.stop();
+      this.observeHandle = undefined;
+    }
   }
 }
 

@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "prettier:check": "prettier --check 'src/**/*.ts'",
-    "prettier:write": "prettier --write 'src/**/*.ts'"
+    "prettier:write": "prettier --write 'src/**/*.ts'",
+    "test:unit": "jest test --config jest.config.js",
+    "test:watch": "jest test --watch --config jest.config.js",
+    "test:coverage": "jest test --coverage --config jest.coverage.config.js"
   },
   "files": [
     "index.js"
@@ -19,6 +22,8 @@
     "@babel/plugin-transform-runtime": "^7.10.5",
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-typescript": "^7.10.4",
+    "@babel/runtime": "^7.10.5",
+    "@types/jest": "^26.0.4",
     "@types/meteor": "^1.4.47",
     "@types/mongodb": "^3.5.25",
     "@typescript-eslint/eslint-plugin": "^3.6.1",
@@ -37,6 +42,8 @@
     "husky": "^4.2.5",
     "jest": "^26.1.0",
     "lint-staged": "^10.2.11",
+    "mongodb": "^3.5.9",
+    "mongodb-memory-server": "^6.6.1",
     "prettier": "^2.0.5",
     "typescript": "^3.9.7",
     "webpack": "^4.43.0",

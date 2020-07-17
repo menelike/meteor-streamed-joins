@@ -12,15 +12,17 @@ type Options = {
 };
 
 class ChangeStream {
-  observer: MongoObserver;
+  private readonly observer: MongoObserver;
 
-  stopListener: ReturnType<typeof ChangeStreamRegistry.addListener> | undefined;
+  private stopListener:
+    | ReturnType<typeof ChangeStreamRegistry.addListener>
+    | undefined;
 
   constructor(observer: MongoObserver) {
     this.observer = observer;
   }
 
-  observe(
+  public observe(
     drainCollection: Collection,
     watchObserveCallBack: WatchObserveCallBack,
     options?: Options
@@ -48,8 +50,14 @@ class ChangeStream {
     });
   }
 
-  stop(): void {
-    if (this.stopListener) this.stopListener();
+  public stop(): boolean {
+    if (this.stopListener) {
+      this.stopListener();
+      this.stopListener = undefined;
+      return true;
+    }
+
+    return false;
   }
 }
 

@@ -1,6 +1,8 @@
-import { DefaultDoc } from '../types';
+import { AnyValue, DefaultDoc } from '../types';
 
-const convertDottedToObject = <T extends { [key: string]: never } = DefaultDoc>(
+const convertDottedToObject = <
+  T extends { [key: string]: AnyValue } = DefaultDoc
+>(
   source: T
 ): DefaultDoc => {
   const nextDoc: DefaultDoc = {};
