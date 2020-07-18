@@ -1,15 +1,18 @@
 module.exports = {
   presets: [
-    ['@babel/preset-env', { modules: 'commonjs' }],
+    [
+      '@babel/preset-env',
+      {
+        targets: {
+          node: 12,
+        },
+      },
+    ],
     '@babel/preset-typescript',
   ],
   plugins: [
     '@babel/plugin-transform-runtime',
     '@babel/plugin-proposal-class-properties',
   ],
-  env: {
-    production: {
-      presets: ['minify'],
-    },
-  },
+  ignore: ['**/*.test.ts'],
 };

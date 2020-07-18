@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "ES2019",
+    "module": "ES6",
+    "target": "ESNext",
     "allowJs": false,
     "strict": true,
     "isolatedModules": false,
@@ -16,9 +16,6 @@
     "babel.config.js",
     "jest.config.js",
     "jest.coverage.config.js",
-    "webpack.*.config.js",
-    "./tests",
-    "__fixtures__",
-    "__mocks__"
+    "./tests"
   ]
 }
