@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - dev
+  release:
+    types:
+      - created
 
 jobs:
   prepare:
@@ -99,3 +102,34 @@ jobs:
 
       - name: test build output
         run: '[ -f ./lib/main.d.ts ] || exit 1'
+
+      - name: upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: ${{ github.workspace }}/lib/**/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'release' && github.event.action == 'created'
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12'
+
+      - uses: actions/checkout@v2
+
+      - name: download build artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: build
+          path: ${{ github.workspace }}/lib/
+
+      - name: test build output
+        run: '[ -f ./lib/main.d.ts ] || exit 1'
+
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
