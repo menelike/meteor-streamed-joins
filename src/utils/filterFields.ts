@@ -26,6 +26,7 @@ const filterAllowedFields = <
   return nextDoc;
 };
 
+// Todo: precompile fields into a regex for faster matching
 const filterDeniedFields = <T extends { [key: string]: AnyValue } = DefaultDoc>(
   fieldOptions: DeniedFields,
   doc: T

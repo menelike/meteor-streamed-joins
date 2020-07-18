@@ -6,7 +6,7 @@ import type {
   Collection,
 } from 'mongodb';
 
-import type { AnyValue, MongoDoc, WatchObserveCallBack } from './types';
+import type { AnyValue, MongoDoc, WatchObserveCallBacks } from './types';
 
 const STATIC_AGGREGATION_PIPELINE = [
   {
@@ -58,7 +58,7 @@ export type ChangeEventMeteor =
   | ChangeEventDeleteMeteor;
 
 class ChangeStreamMultiplexer {
-  private readonly listeners: Set<WatchObserveCallBack>;
+  private readonly listeners: Set<WatchObserveCallBacks>;
 
   private readonly collection: Collection;
 
@@ -115,12 +115,12 @@ class ChangeStreamMultiplexer {
     this.stopIfUseless();
   }
 
-  public addListener = (listener: WatchObserveCallBack): void => {
+  public addListener = (listener: WatchObserveCallBacks): void => {
     this.listeners.add(listener);
     this.startIfNeeded();
   };
 
-  public removeListener = (listener: WatchObserveCallBack): void => {
+  public removeListener = (listener: WatchObserveCallBacks): void => {
     this.listeners.delete(listener);
     this.stopIfUseless();
   };

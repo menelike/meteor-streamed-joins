@@ -10,13 +10,19 @@ export interface MongoDoc {
   [key: string]: AnyValue;
 }
 
-export type MeteorObserverChanges<T = MongoDoc> = {
-  added: (doc: T) => Array<string>;
-  changed: (newDoc: T, oldDoc: T) => Array<string>;
+export type MeteorObserveCallbacks<T = MongoDoc> = {
+  added: (doc: T) => Array<string> | void;
+  changed: (newDoc: T, oldDoc: T) => Array<string> | void;
   removed: (oldDoc: T) => void;
 };
 
-export interface WatchObserveCallBack {
+export type MeteorObserveChangesCallbacks<T = MongoDoc> = {
+  added: (id: string, fields: Partial<T>) => Array<string> | void;
+  changed: (id: string, fields: Partial<T>) => Array<string> | void;
+  removed: (id: string) => void;
+};
+
+export interface WatchObserveCallBacks {
   added(keys: string[]): void;
   changed(
     _id: string,

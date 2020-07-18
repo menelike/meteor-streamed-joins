@@ -2,7 +2,7 @@ import type { Collection } from 'mongodb';
 
 import ChangeStreamRegistry from './ChangeStreamRegistry';
 import type MongoObserver from './MongoObserver';
-import type { WatchObserveCallBack } from './types';
+import type { WatchObserveCallBacks } from './types';
 import convertDottedToObject from './utils/convertDottedToObject';
 import filterFields from './utils/filterFields';
 import type { FieldProjection } from './utils/filterFields';
@@ -24,7 +24,7 @@ class ChangeStream {
 
   public observe(
     drainCollection: Collection,
-    watchObserveCallBack: WatchObserveCallBack,
+    watchObserveCallBack: WatchObserveCallBacks,
     options?: Options
   ): void {
     this.stopListener = ChangeStreamRegistry.addListener(drainCollection, {

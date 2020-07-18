@@ -1,7 +1,7 @@
 import type { Collection } from 'mongodb';
 
 import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
-import type { WatchObserveCallBack } from './types';
+import type { WatchObserveCallBacks } from './types';
 
 class ChangeStreamDeMultiplexer {
   private readonly listeners: Record<string, ChangeStreamMultiplexer>;
@@ -14,7 +14,7 @@ class ChangeStreamDeMultiplexer {
 
   public addListener(
     collection: Collection,
-    watchObserveCallBack: WatchObserveCallBack
+    watchObserveCallBack: WatchObserveCallBacks
   ): () => void {
     const namespace = collection.namespace.toString();
 

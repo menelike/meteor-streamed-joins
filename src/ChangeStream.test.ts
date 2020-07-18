@@ -7,7 +7,7 @@ import sleep from '../tests/sleep';
 import ChangeStream from './ChangeStream';
 import ChangeStreamRegistry from './ChangeStreamRegistry';
 import MongoObserver from './MongoObserver';
-import { WatchObserveCallBack } from './types';
+import { WatchObserveCallBacks } from './types';
 
 const mongoDB = new MongoMemoryReplSet();
 
@@ -278,7 +278,7 @@ describe('ChangeStream', () => {
   it('throw on added or removed', () => {
     expect.assertions(2);
 
-    let callback: WatchObserveCallBack | undefined;
+    let callback: WatchObserveCallBacks | undefined;
     jest
       .spyOn(ChangeStreamRegistry, 'addListener')
       .mockImplementation((col, cb) => {
