@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import type { Meteor } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
@@ -418,5 +418,48 @@ describe('MongoObserver', () => {
     expect(watchObserveCallBack.added).toHaveBeenCalledTimes(0);
     expect(watchObserveCallBack.changed).toHaveBeenCalledTimes(0);
     expect(watchObserveCallBack.removed).toHaveBeenCalledTimes(0);
+  });
+
+  it('prevent registering twice', () => {
+    expect.assertions(1);
+
+    let callback: MeteorObserverChanges | undefined;
+    const cursorMock = {
+      observe: (cb: MeteorObserverChanges): Meteor.LiveQueryHandle => {
+        callback = cb;
+        return {
+          stop: jest.fn(),
+        };
+      },
+    } as Mongo.Cursor<MongoDoc>;
+
+    const observeChangesCallback = {
+      added: jest.fn(),
+      changed: jest.fn(),
+      removed: jest.fn(),
+    };
+
+    const watchObserveCallBack = {
+      added: jest.fn(),
+      changed: jest.fn(),
+      removed: jest.fn(),
+    };
+
+    mongoObserver = new MongoObserver();
+    mongoObserver.observe(
+      cursorMock,
+      observeChangesCallback,
+      watchObserveCallBack
+    );
+    if (!callback) throw Error('callback not set');
+
+    expect(() => {
+      if (!mongoObserver) throw Error('mongoObserver not set');
+      mongoObserver.observe(
+        cursorMock,
+        observeChangesCallback,
+        watchObserveCallBack
+      );
+    }).toThrowError('observer already registered');
   });
 });

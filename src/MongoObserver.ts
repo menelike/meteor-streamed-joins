@@ -36,6 +36,8 @@ class MongoObserver {
     observeChangesCallback: MeteorObserverChanges,
     watchObserveCallBack: WatchObserveCallBack
   ): void {
+    if (this.observeHandle) throw Error('observer already registered');
+
     this.firstRun = true;
     this.observeHandle = cursor.observe({
       added: (doc: MongoDoc) => {
