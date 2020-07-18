@@ -69,7 +69,7 @@ describe('ChangeStreamMultiplexer', () => {
   });
 
   it('fire on update', async () => {
-    expect.assertions(4);
+    expect.assertions(5);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = { _id: new ObjectID().toHexString(), name: 'foo' };
@@ -95,7 +95,8 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
     expect(listener.changed.mock.calls[0][1]).toEqual({ name: 'changedFoo' });
-    expect(listener.changed.mock.calls[0][2]).toMatchObject({
+    expect(listener.changed.mock.calls[0][2]).toBeFalsy();
+    expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'update',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
@@ -108,7 +109,7 @@ describe('ChangeStreamMultiplexer', () => {
   });
 
   it('fire on replace', async () => {
-    expect.assertions(4);
+    expect.assertions(5);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = { _id: new ObjectID().toHexString(), name: 'foo' };
@@ -131,7 +132,8 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
     expect(listener.changed.mock.calls[0][1]).toEqual({ name: 'changedFoo' });
-    expect(listener.changed.mock.calls[0][2]).toMatchObject({
+    expect(listener.changed.mock.calls[0][2]).toBeTruthy();
+    expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'replace',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
@@ -141,7 +143,7 @@ describe('ChangeStreamMultiplexer', () => {
   });
 
   it('merge removed fields on update', async () => {
-    expect.assertions(4);
+    expect.assertions(5);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
@@ -174,7 +176,8 @@ describe('ChangeStreamMultiplexer', () => {
       name: 'changedFoo',
       toRemove: undefined,
     });
-    expect(listener.changed.mock.calls[0][2]).toMatchObject({
+    expect(listener.changed.mock.calls[0][2]).toBeFalsy();
+    expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'update',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
@@ -187,7 +190,7 @@ describe('ChangeStreamMultiplexer', () => {
   });
 
   it('merge removed fields on replace', async () => {
-    expect.assertions(7);
+    expect.assertions(8);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
@@ -213,21 +216,22 @@ describe('ChangeStreamMultiplexer', () => {
 
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
+    // Todo no diff received on replace, hence toRemove not determined and missing
     expect(listener.changed.mock.calls[0][1]).toEqual({
       name: 'changedFoo',
-      // Todo no diff received on replace, hence toRemove not determined and missing
-      toRemove: undefined,
     });
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
     expect(listener.changed.mock.calls[0][1]).toEqual({ name: 'changedFoo' });
-    expect(listener.changed.mock.calls[0][2]).toMatchObject({
+    expect(listener.changed.mock.calls[0][2]).toBeTruthy();
+    // Todo no diff received on replace
+    //  hence meteor.fields.toRemove not determined and missing
+    expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'replace',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
       fullDocument: { _id: document._id, name: 'changedFoo' },
-      // Todo no diff received on replace, hence toRemove not determined and missing
-      meteor: { fields: { name: 'changedFoo', toRemove: undefined } },
+      meteor: { fields: { name: 'changedFoo' } },
     });
   });
 });

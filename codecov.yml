@@ -1,0 +1,21 @@
+coverage:
+  status:
+    project:
+      # disable the default status that measures entire project
+      default: false
+      src:
+        # if ci fails report status as success, error, or failure
+        if_ci_failed: error
+        # if parent is not found report status as success, error, or failure
+        if_not_found: success
+        # will post commit status of "error" if no coverage reports we uploaded
+        # options: success, error, failure
+        if_no_uploads: error
+        target: auto
+        flags:
+          - src
+
+flags:
+  src:
+    paths:
+      - src/
