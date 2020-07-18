@@ -11,7 +11,7 @@ const mongoDB = new MongoMemoryReplSet();
 
 const COLLECTION_NAME = 'test';
 
-const DEFAULT_WAIT_IN_MS = 150;
+const DEFAULT_WAIT_IN_MS = 250;
 
 let multiplexer: ChangeStreamMultiplexer | undefined;
 

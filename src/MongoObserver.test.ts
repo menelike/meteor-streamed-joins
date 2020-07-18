@@ -17,7 +17,7 @@ import { MongoDoc } from './types';
 
 const mongoDB = new MongoMemoryReplSet();
 
-const DEFAULT_WAIT_IN_MS = 150;
+const DEFAULT_WAIT_IN_MS = 250;
 
 // one thread can have multiple users
 // a user can be related to many threads
