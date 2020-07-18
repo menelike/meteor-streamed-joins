@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint . --ext .ts,.js",
+    "lint:compile": "tsc --noEmit --skipLibCheck",
     "prettier:check": "prettier --check 'src/**/*.ts'",
     "prettier:write": "prettier --write 'src/**/*.ts'",
     "test:unit": "jest test --config jest.config.js",
@@ -54,7 +55,8 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run lint:compile"
     }
   },
   "lint-staged": {

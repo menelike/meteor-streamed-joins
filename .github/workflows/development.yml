@@ -58,6 +58,9 @@ jobs:
       - name: lint
         run: npm run lint
 
+      - name: lint:compile
+        run: npm run lint:compile
+
       - name: unit tests
         run: npm run test:coverage
 
