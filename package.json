@@ -1,7 +1,7 @@
 {
   "name": "meteor-streamed-joins",
   "version": "0.0.1",
-  "description": "code quality base bundle",
+  "description": "publish (reactive) joined collections in Meteor",
   "main": "lib/main.js",
   "types": "lib/main.d.ts",
   "scripts": {
@@ -17,11 +17,18 @@
     "build:declaration": "tsc --declaration --outDir lib/ --rootDir ./src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json"
   },
   "files": [
-    "lib"
+    "lib",
+    "LICENSE.md"
   ],
   "author": "Human Ashrafi",
-  "license": "UNLICENSED",
-  "repository": "git@github.com:menelike/meteor-streamed-joins.git",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/menelike/meteor-streamed-joins.git"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
   "dependencies": {
     "@babel/cli": "^7.10.5"
   },
