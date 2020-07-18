@@ -10,7 +10,7 @@
     "test:unit": "jest test --config jest.config.js",
     "test:watch": "jest test --watch --config jest.config.js",
     "test:coverage": "jest test --coverage --config jest.coverage.config.js",
-    "build": "babel --delete-dir-on-start src --out-dir lib --extensions '.ts'"
+    "build": "babel --delete-dir-on-start src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts'"
   },
   "files": [
     "index.js"
