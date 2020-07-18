@@ -22,7 +22,7 @@ let cleanup: (() => Promise<void> | void) | undefined;
 
 // Todo close on crash
 class MongoMemoryReplSet {
-  private mongod: _MongoMemoryReplSet;
+  private readonly mongod: _MongoMemoryReplSet;
 
   private connection: MongoClient | undefined;
 
