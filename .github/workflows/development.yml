@@ -70,3 +70,32 @@ jobs:
           FLAGS: src
           PROJECT_DIR: ./
         run: bash <(curl -s https://codecov.io/bash) -s $PROJECT_DIR -F $FLAGS -Z
+
+  build:
+    needs: test
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12'
+
+      - uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: NPM ci
+        run: npm ci
+
+      - name: build
+        run: npm run build
+
+      - name: test build output
+        run: '[ -f ./lib/main.d.ts ] || exit 1'
