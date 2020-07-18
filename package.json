@@ -4,6 +4,7 @@
   "description": "code quality base bundle",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint . --ext .ts,.js",
     "prettier:check": "prettier --check 'src/**/*.ts'",
     "prettier:write": "prettier --write 'src/**/*.ts'",
     "test:unit": "jest test --config jest.config.js",
