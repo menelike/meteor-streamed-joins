@@ -105,7 +105,7 @@ class ChangeStreamMultiplexer {
           fields[f] = undefined;
         });
       }
-      listener.changed(_id, fields, next);
+      listener.changed(_id, fields, next.operationType === 'replace', next);
     });
   };
 

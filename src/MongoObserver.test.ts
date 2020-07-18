@@ -317,6 +317,7 @@ describe('MongoObserver', () => {
       1,
       userAId,
       { name: 'changed' },
+      false,
       expect.anything()
     );
   });

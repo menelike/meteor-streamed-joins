@@ -21,6 +21,7 @@ export interface WatchObserveCallBack {
   changed(
     _id: string,
     fields: Record<string, AnyValue>,
+    replace: boolean,
     op: ChangeEventMeteor
   ): void;
   removed(keys: string[]): void;

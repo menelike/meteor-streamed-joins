@@ -31,7 +31,7 @@ class ChangeStream {
       added: () => {
         throw Error('not supported');
       },
-      changed: (_id, fields, next) => {
+      changed: (_id, fields, replace, next) => {
         if (!this.observer.foreignKeyRegistry.hasForeignKey(_id)) return;
         let nextFields = fields;
         if (options?.fields) {
@@ -41,7 +41,7 @@ class ChangeStream {
         nextFields = convertDottedToObject(nextFields);
 
         if (Object.keys(nextFields).length) {
-          watchObserveCallBack.changed(_id, nextFields, next);
+          watchObserveCallBack.changed(_id, nextFields, replace, next);
         }
       },
       removed: () => {
