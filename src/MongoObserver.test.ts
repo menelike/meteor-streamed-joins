@@ -598,14 +598,14 @@ describe('MongoObserver', () => {
     expect.assertions(4);
 
     const cursorMock = {
-      // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
       observe: (cb: MeteorObserveCallbacks): Meteor.LiveQueryHandle => {
         return {
           stop: jest.fn(),
         };
       },
       observeChanges: (
-        // eslint-disable-next-line no-unused-vars
+        // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
         cb: MeteorObserveChangesCallbacks
       ): Meteor.LiveQueryHandle => {
         return {
