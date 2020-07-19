@@ -37,7 +37,7 @@ jobs:
 
       - name: lerna bootstrap
         if: steps.cache.outputs.cache-hit != 'true'
-        run: lerna bootstrap
+        run: ./node_modules/.bin/lerna bootstrap
 
   test:
     needs: prepare
@@ -63,13 +63,13 @@ jobs:
         run: npm ci
 
       - name: lerna bootstrap
-        run: lerna bootstrap
+        run: ./node_modules/.bin/lerna bootstrap
 
       - name: lint
-        run: lerna run lint
+        run: ./node_modules/.bin/lerna run lint
 
       - name: unit test:coverage
-        run: lerna run test:coverage
+        run: ./node_modules/.bin/lerna run test:coverage
 
       - name: codecov
         env:
@@ -102,13 +102,13 @@ jobs:
         run: npm ci
 
       - name: lerna bootstrap
-        run: lerna bootstrap
+        run: ./node_modules/.bin/lerna bootstrap
 
       - name: build
-        run: lerna run build
+        run: ./node_modules/.bin/lerna run build
 
       - name: test build output
-        run: '[ -f ./main/lib/main.d.ts ] || exit 1'
+        run: '[ -f ./main/lib/index.d.ts ] || exit 1'
 
       - name: upload build artifact
         uses: actions/upload-artifact@v2
@@ -135,7 +135,7 @@ jobs:
           path: ${{ github.workspace }}/main/lib/
 
       - name: test build output
-        run: '[ -f ./main/lib/main.d.ts ] || exit 1'
+        run: '[ -f ./main/lib/index.d.ts ] || exit 1'
 
       - run: npm publish --access public
         working-directory: ${{env.working-dir}}/main/
