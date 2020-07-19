@@ -4,6 +4,7 @@ import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
 import type { WatchObserveCallBacks, MongoDoc } from './types';
 
 class ChangeStreamDeMultiplexer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly listeners: Record<string, ChangeStreamMultiplexer<any>>;
 
   constructor() {
