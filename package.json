@@ -1,36 +1,20 @@
 {
-  "name": "meteor-streamed-joins",
-  "version": "0.0.1",
-  "description": "publish (reactive) joined collections in Meteor",
-  "main": "lib/main.js",
-  "types": "lib/main.d.ts",
+  "private": true,
   "scripts": {
-    "lint": "eslint . --ext .ts,.js",
-    "lint:compile": "tsc --noEmit --skipLibCheck",
-    "prettier:check": "prettier --check 'src/**/*.ts'",
-    "prettier:write": "prettier --write 'src/**/*.ts'",
-    "test:unit": "jest test --config jest.config.js",
-    "test:watch": "jest test --watch --config jest.config.js",
-    "test:coverage": "jest test --coverage --config jest.coverage.config.js",
-    "build": "npm run build:transpile && npm run build:declaration",
-    "build:transpile": "babel --delete-dir-on-start src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts' --ignore 'tests'",
-    "build:declaration": "tsc --declaration --outDir lib/ --rootDir ./src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json"
+    "lint": "lerna run --stream --parallel lint",
+    "prettier:check": "lerna run --stream --parallel prettier:check",
+    "prettier:write": "lerna run --stream --parallel prettier:write",
+    "test:unit": "lerna run --stream --parallel test:unit",
+    "test:watch": "lerna run --stream --parallel test:watch",
+    "test:coverage": "lerna run --stream --parallel test:coverage",
+    "start": "lerna run --stream --parallel start",
+    "build": "lerna run --stream --parallel build",
+    "precommit": "lerna run --stream --parallel precommit",
+    "prepush": "lerna run --stream --parallel prepush"
   },
-  "files": [
-    "lib",
-    "LICENSE.md"
-  ],
-  "author": "Human Ashrafi",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/menelike/meteor-streamed-joins.git"
-  },
-  "engines": {
-    "node": ">=12.0.0"
-  },
-  "dependencies": {
-    "@babel/runtime": "^7.10.5"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.5",
@@ -40,8 +24,6 @@
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-typescript": "^7.10.4",
     "@types/jest": "^26.0.4",
-    "@types/meteor": "^1.4.47",
-    "@types/mongodb": "^3.5.25",
     "@typescript-eslint/eslint-plugin": "^3.6.1",
     "@typescript-eslint/parser": "^3.6.1",
     "eslint": "^7.4.0",
@@ -56,20 +38,16 @@
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-promise": "^4.2.1",
     "husky": "^4.2.5",
+    "lerna": "^3.22.1",
     "jest": "^26.1.0",
     "lint-staged": "^10.2.11",
-    "mongodb": "^3.5.9",
-    "mongodb-memory-server": "^6.6.1",
     "prettier": "^2.0.5",
     "typescript": "^3.9.7"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run lint:compile"
+      "pre-commit": "lerna run --stream precommit",
+      "pre-push": "lerna run --stream prepush"
     }
-  },
-  "lint-staged": {
-    "src/**/*.ts": "eslint"
   }
 }

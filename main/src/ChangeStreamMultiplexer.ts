@@ -6,7 +6,7 @@ import type {
   Collection,
 } from 'mongodb';
 
-import type { AnyValue, MongoDoc, WatchObserveCallBacks } from './types';
+import type { DefaultDoc, MongoDoc, WatchObserveCallBacks } from './types';
 
 const STATIC_AGGREGATION_PIPELINE = [
   {
@@ -36,29 +36,29 @@ const STATIC_AGGREGATION_PIPELINE = [
   },
 ];
 
-interface ChangeEventMeteorBase {
-  meteor: { fields: Record<string, AnyValue> };
+interface ChangeEventMeteorBase<T> {
+  meteor: { fields: Partial<T> & DefaultDoc };
 }
 
-interface ChangeEventCRMeteor
-  extends ChangeEventCR<MongoDoc>,
-    ChangeEventMeteorBase {}
+interface ChangeEventCRMeteor<T extends MongoDoc = MongoDoc>
+  extends ChangeEventCR<T>,
+    ChangeEventMeteorBase<T> {}
 
-interface ChangeEventUpdateMeteor
-  extends ChangeEventUpdate<MongoDoc>,
-    ChangeEventMeteorBase {}
+interface ChangeEventUpdateMeteor<T extends MongoDoc = MongoDoc>
+  extends ChangeEventUpdate<T>,
+    ChangeEventMeteorBase<T> {}
 
-interface ChangeEventDeleteMeteor
-  extends ChangeEventDelete<MongoDoc>,
-    ChangeEventMeteorBase {}
+interface ChangeEventDeleteMeteor<T extends MongoDoc = MongoDoc>
+  extends ChangeEventDelete<T>,
+    ChangeEventMeteorBase<T> {}
 
-export type ChangeEventMeteor =
-  | ChangeEventCRMeteor
-  | ChangeEventUpdateMeteor
-  | ChangeEventDeleteMeteor;
+export type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
+  | ChangeEventCRMeteor<T>
+  | ChangeEventUpdateMeteor<T>
+  | ChangeEventDeleteMeteor<T>;
 
-class ChangeStreamMultiplexer {
-  private readonly listeners: Set<WatchObserveCallBacks>;
+class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
+  private readonly listeners: Set<WatchObserveCallBacks<T>>;
 
   private readonly collection: Collection;
 
@@ -91,7 +91,7 @@ class ChangeStreamMultiplexer {
     }
   }
 
-  private onChange = (next: ChangeEventMeteor): void => {
+  private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
     const { fields } = next.meteor;
     this.listeners.forEach((listener) => {
@@ -115,12 +115,12 @@ class ChangeStreamMultiplexer {
     this.stopIfUseless();
   }
 
-  public addListener = (listener: WatchObserveCallBacks): void => {
+  public addListener = (listener: WatchObserveCallBacks<T>): void => {
     this.listeners.add(listener);
     this.startIfNeeded();
   };
 
-  public removeListener = (listener: WatchObserveCallBacks): void => {
+  public removeListener = (listener: WatchObserveCallBacks<T>): void => {
     this.listeners.delete(listener);
     this.stopIfUseless();
   };

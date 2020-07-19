@@ -1,34 +1,33 @@
 import type { ChangeEventMeteor } from './ChangeStreamMultiplexer';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyValue = any;
+export type DefaultDoc = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+};
 
-export type DefaultDoc = Record<string, AnyValue>;
-
-export interface MongoDoc {
+export interface MongoDoc extends DefaultDoc {
   _id: string;
-  [key: string]: AnyValue;
 }
 
-export type MeteorObserveCallbacks<T = MongoDoc> = {
+export type MeteorObserveCallbacks<T extends MongoDoc = MongoDoc> = {
   added: (doc: T) => Array<string> | void;
   changed: (newDoc: T, oldDoc: T) => Array<string> | void;
   removed: (oldDoc: T) => void;
 };
 
-export type MeteorObserveChangesCallbacks<T = MongoDoc> = {
+export type MeteorObserveChangesCallbacks<T extends MongoDoc = MongoDoc> = {
   added: (id: string, fields: Partial<T>) => Array<string> | void;
   changed: (id: string, fields: Partial<T>) => Array<string> | void;
   removed: (id: string) => void;
 };
 
-export interface WatchObserveCallBacks {
+export interface WatchObserveCallBacks<T extends MongoDoc = MongoDoc> {
   added(keys: string[]): void;
   changed(
     _id: string,
-    fields: Record<string, AnyValue>,
+    fields: Partial<T>,
     replace: boolean,
-    op: ChangeEventMeteor
+    op: ChangeEventMeteor<T>
   ): void;
   removed(keys: string[]): void;
 }

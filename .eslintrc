@@ -13,7 +13,7 @@
     "prettier/babel",
     "prettier/@typescript-eslint"
   ],
- "env": {
+  "env": {
     "node": true,
     "jest": true
   },
@@ -23,7 +23,11 @@
     }
   },
   "rules": {
-    "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": true }],
+    "eslint-comments/no-unused-disable": "error",
+    "eslint-comments/disable-enable-pair": [
+      "error",
+      { "allowWholeFile": true }
+    ],
     "import/prefer-default-export": "off",
     "import/no-unresolved": [
       "error",
@@ -66,4 +70,3 @@
     "no-underscore-dangle": "off"
   }
 }
-

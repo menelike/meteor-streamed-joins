@@ -1,10 +1,15 @@
 {
-  "extends": "./tsconfig.base.json",
-  "include": [
-    "./src",
-    "./tests",
-    "babel.config.js",
-    "jest.config.js",
-    "jest.coverage.config.js"
-  ]
+  "compilerOptions": {
+    "module": "ES6",
+    "target": "ESNext",
+    "strict": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "meteor-streamed-joins": ["main/src/index.ts"]
+    }
+  },
+  "exclude": ["**/node_modules/*", "**/dist/*", "**/lib/*", "**/coverage/*"]
 }

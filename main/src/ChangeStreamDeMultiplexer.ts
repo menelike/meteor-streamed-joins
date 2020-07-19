@@ -1,10 +1,10 @@
 import type { Collection } from 'mongodb';
 
 import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
-import type { WatchObserveCallBacks } from './types';
+import type { WatchObserveCallBacks, MongoDoc } from './types';
 
 class ChangeStreamDeMultiplexer {
-  private readonly listeners: Record<string, ChangeStreamMultiplexer>;
+  private readonly listeners: Record<string, ChangeStreamMultiplexer<any>>;
 
   constructor() {
     this.listeners = {};
@@ -12,14 +12,14 @@ class ChangeStreamDeMultiplexer {
 
   public hasListeners = (): boolean => !!Object.keys(this.listeners).length;
 
-  public addListener(
-    collection: Collection,
-    watchObserveCallBack: WatchObserveCallBacks
+  public addListener<T extends MongoDoc = MongoDoc>(
+    collection: Collection<T>,
+    watchObserveCallBack: WatchObserveCallBacks<T>
   ): () => void {
     const namespace = collection.namespace.toString();
 
     if (!(namespace in this.listeners)) {
-      this.listeners[namespace] = new ChangeStreamMultiplexer(collection);
+      this.listeners[namespace] = new ChangeStreamMultiplexer<T>(collection);
     }
     this.listeners[namespace].addListener(watchObserveCallBack);
 

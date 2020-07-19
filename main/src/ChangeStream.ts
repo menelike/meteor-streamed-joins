@@ -2,7 +2,7 @@ import type { Collection } from 'mongodb';
 
 import ChangeStreamRegistry from './ChangeStreamRegistry';
 import type MongoObserver from './MongoObserver';
-import type { WatchObserveCallBacks } from './types';
+import type { WatchObserveCallBacks, MongoDoc } from './types';
 import convertDottedToObject from './utils/convertDottedToObject';
 import filterFields from './utils/filterFields';
 import type { FieldProjection } from './utils/filterFields';
@@ -11,34 +11,36 @@ type Options = {
   fields?: FieldProjection;
 };
 
-class ChangeStream {
-  private readonly observer: MongoObserver;
+class ChangeStream<T extends MongoDoc = MongoDoc> {
+  private readonly observer: MongoObserver<T>;
 
   private stopListener:
     | ReturnType<typeof ChangeStreamRegistry.addListener>
     | undefined;
 
-  constructor(observer: MongoObserver) {
+  constructor(observer: MongoObserver<T>) {
     this.observer = observer;
   }
 
   public observe(
-    drainCollection: Collection,
-    watchObserveCallBack: WatchObserveCallBacks,
+    drainCollection: Collection<T>,
+    watchObserveCallBack: WatchObserveCallBacks<T>,
     options?: Options
   ): void {
-    this.stopListener = ChangeStreamRegistry.addListener(drainCollection, {
+    this.stopListener = ChangeStreamRegistry.addListener<T>(drainCollection, {
       added: () => {
         throw Error('not supported');
       },
       changed: (_id, fields, replace, next) => {
         if (!this.observer.foreignKeyRegistry.hasForeignKey(_id)) return;
-        let nextFields = fields;
-        if (options?.fields) {
-          nextFields = filterFields(options.fields, nextFields);
-        }
 
-        nextFields = convertDottedToObject(nextFields);
+        let nextFields;
+        if (options?.fields) {
+          nextFields = filterFields(options.fields, fields);
+        } else {
+          nextFields = fields;
+        }
+        nextFields = convertDottedToObject<T>(nextFields);
 
         if (Object.keys(nextFields).length) {
           watchObserveCallBack.changed(_id, nextFields, replace, next);
