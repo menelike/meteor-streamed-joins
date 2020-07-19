@@ -1,0 +1,9 @@
+{
+  "extends": ["../.eslintrc"],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "rules": {
+    "no-plusplus": [2, { "allowForLoopAfterthoughts": true }]
+  }
+}

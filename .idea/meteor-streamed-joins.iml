@@ -3,9 +3,10 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.tmp" />
-      <excludeFolder url="file://$MODULE_DIR$/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/dist" />
-      <excludeFolder url="file://$MODULE_DIR$/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/main/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/main/lib" />
+      <excludeFolder url="file://$MODULE_DIR$/meteor-test-app/.meteor/local" />
       <excludeFolder url="file://$MODULE_DIR$/temp" />
       <excludeFolder url="file://$MODULE_DIR$/tmp" />
     </content>

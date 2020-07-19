@@ -1,0 +1,35 @@
+{
+  "name": "meteor-test-app",
+  "private": true,
+  "scripts": {
+    "start": "unset ROOT_URL && unset MONGO_URL && unset MONGO_OPLOG_URL && meteor run --port 3001",
+    "lint": "npm run lint:eslint && npm run lint:compile",
+    "lint:eslint": "eslint . --ext .ts,.js",
+    "lint:compile": "tsc --noEmit --skipLibCheck",
+    "prettier:check": "prettier --check 'src/**/*.ts'",
+    "prettier:write": "prettier --write 'src/**/*.ts'",
+    "precommit": "lint-staged",
+    "prepush": "npm run lint"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "src/client.tsx",
+      "server": "src/server.ts"
+    }
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.10.5",
+    "faker": "^4.1.0",
+    "meteor-node-stubs": "^1.0.0",
+    "meteor-streamed-joins": "file:../main",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  },
+  "devDependencies": {
+    "@types/faker": "^4.1.12",
+    "@types/meteor": "^1.4.47"
+  },
+  "lint-staged": {
+    "src/**/*.ts": "eslint"
+  }
+}

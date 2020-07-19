@@ -1,0 +1,51 @@
+{
+  "name": "meteor-streamed-joins",
+  "version": "0.0.1",
+  "description": "publish (reactive) joined collections in Meteor",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "lint": "npm run lint:eslint && npm run lint:compile",
+    "lint:eslint": "eslint . --ext .ts,.js",
+    "lint:compile": "tsc --noEmit --skipLibCheck",
+    "prettier:check": "prettier --check 'src/**/*.ts'",
+    "prettier:write": "prettier --write 'src/**/*.ts'",
+    "test:unit": "jest test --config jest.config.js",
+    "test:watch": "jest test --watch --config jest.config.js",
+    "test:coverage": "jest test --coverage --config jest.coverage.config.js",
+    "start": "concurrently --kill-others \"npm:watch:*\"",
+    "watch:transpile": "babel -w src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts' --ignore 'tests'",
+    "watch:declaration": "tsc -w --declaration --outDir lib/ --rootDir src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json",
+    "build": "npm run build:transpile && npm run build:declaration",
+    "build:transpile": "babel --delete-dir-on-start src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts' --ignore 'tests'",
+    "build:declaration": "tsc --declaration --outDir lib/ --rootDir src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json",
+    "precommit": "lint-staged",
+    "prepush": "npm run lint"
+  },
+  "files": [
+    "lib",
+    "LICENSE.md"
+  ],
+  "author": "Human Ashrafi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/menelike/meteor-streamed-joins.git"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.10.5"
+  },
+  "devDependencies": {
+    "@types/meteor": "^1.4.47",
+    "@types/mongodb": "^3.5.25",
+    "concurrently": "^5.2.0",
+    "mongodb": "^3.5.9",
+    "mongodb-memory-server": "^6.6.1"
+  },
+  "lint-staged": {
+    "src/**/*.ts": "eslint"
+  }
+}

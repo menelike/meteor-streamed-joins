@@ -1,10 +1,8 @@
-import { AnyValue, DefaultDoc } from '../types';
+import { DefaultDoc } from '../types';
 
-const convertDottedToObject = <
-  T extends { [key: string]: AnyValue } = DefaultDoc
->(
-  source: T
-): DefaultDoc => {
+const convertDottedToObject = <T extends DefaultDoc = DefaultDoc>(
+  source: DefaultDoc
+): T => {
   const nextDoc: DefaultDoc = {};
   Object.entries(source).forEach(([k, v]) => {
     const path = k.split('.');
@@ -18,7 +16,7 @@ const convertDottedToObject = <
       return acc[cur];
     }, nextDoc);
   });
-  return nextDoc;
+  return nextDoc as T;
 };
 
 export default convertDottedToObject;

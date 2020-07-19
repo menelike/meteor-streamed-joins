@@ -35,6 +35,10 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      - name: lerna bootstrap
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ./node_modules/.bin/lerna bootstrap
+
   test:
     needs: prepare
     runs-on: ubuntu-18.04
@@ -58,20 +62,20 @@ jobs:
       - name: NPM ci
         run: npm ci
 
+      - name: lerna bootstrap
+        run: ./node_modules/.bin/lerna bootstrap
+
       - name: lint
-        run: npm run lint
+        run: ./node_modules/.bin/lerna run lint
 
-      - name: lint:compile
-        run: npm run lint:compile
-
-      - name: unit tests
-        run: npm run test:coverage
+      - name: unit test:coverage
+        run: ./node_modules/.bin/lerna run test:coverage
 
       - name: codecov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          FLAGS: src
-          PROJECT_DIR: ./
+          FLAGS: main
+          PROJECT_DIR: ./main
         run: bash <(curl -s https://codecov.io/bash) -s $PROJECT_DIR -F $FLAGS -Z
 
   build:
@@ -97,17 +101,20 @@ jobs:
       - name: NPM ci
         run: npm ci
 
+      - name: lerna bootstrap
+        run: ./node_modules/.bin/lerna bootstrap
+
       - name: build
-        run: npm run build
+        run: ./node_modules/.bin/lerna run build
 
       - name: test build output
-        run: '[ -f ./lib/main.d.ts ] || exit 1'
+        run: '[ -f ./main/lib/index.d.ts ] || exit 1'
 
       - name: upload build artifact
         uses: actions/upload-artifact@v2
         with:
           name: build
-          path: ${{ github.workspace }}/lib/**/*
+          path: ${{ github.workspace }}/main/lib/**/*
 
   publish:
     needs: build
@@ -125,11 +132,12 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: build
-          path: ${{ github.workspace }}/lib/
+          path: ${{ github.workspace }}/main/lib/
 
       - name: test build output
-        run: '[ -f ./lib/main.d.ts ] || exit 1'
+        run: '[ -f ./main/lib/index.d.ts ] || exit 1'
 
       - run: npm publish --access public
+        working-directory: ${{env.working-dir}}/main/
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

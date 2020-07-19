@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import type { Meteor } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
 
 import ForeignKeyRegistry from './ForeignKeyRegistry';
@@ -9,7 +9,7 @@ import type {
   WatchObserveCallBacks,
 } from './types';
 
-class MongoObserver {
+class MongoObserver<T extends MongoDoc = MongoDoc> {
   public readonly foreignKeyRegistry: ForeignKeyRegistry;
 
   private firstRun: true | undefined;
@@ -21,7 +21,7 @@ class MongoObserver {
   }
 
   private handleWatchObserver(
-    watchObserveCallBack: WatchObserveCallBacks
+    watchObserveCallBack: WatchObserveCallBacks<T>
   ): void {
     if (this.foreignKeyRegistry.added.size) {
       watchObserveCallBack.added([...this.foreignKeyRegistry.added]);
@@ -33,9 +33,9 @@ class MongoObserver {
   }
 
   public observe(
-    cursor: Mongo.Cursor<MongoDoc>,
-    observeCallbacks: MeteorObserveCallbacks,
-    watchObserveCallBacks: WatchObserveCallBacks
+    cursor: Mongo.Cursor<T>,
+    observeCallbacks: MeteorObserveCallbacks<T>,
+    watchObserveCallBacks: WatchObserveCallBacks<T>
   ): void {
     if (this.observeHandle) throw Error('observer already registered');
 
@@ -62,9 +62,9 @@ class MongoObserver {
   }
 
   public observeChanges(
-    cursor: Mongo.Cursor<MongoDoc>,
-    observeChangesCallbacks: MeteorObserveChangesCallbacks,
-    watchObserveCallBacks: WatchObserveCallBacks
+    cursor: Mongo.Cursor<T>,
+    observeChangesCallbacks: MeteorObserveChangesCallbacks<T>,
+    watchObserveCallBacks: WatchObserveCallBacks<T>
   ): void {
     if (this.observeHandle) throw Error('observer already registered');
 

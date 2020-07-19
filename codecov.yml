@@ -3,7 +3,7 @@ coverage:
     project:
       # disable the default status that measures entire project
       default: false
-      src:
+      main:
         # if ci fails report status as success, error, or failure
         if_ci_failed: error
         # if parent is not found report status as success, error, or failure
@@ -13,9 +13,9 @@ coverage:
         if_no_uploads: error
         target: auto
         flags:
-          - src
+          - main
 
 flags:
-  src:
+  main:
     paths:
-      - src/
+      - main/
