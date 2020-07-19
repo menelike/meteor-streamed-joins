@@ -137,7 +137,8 @@ jobs:
       - name: test build output
         run: '[ -f ./main/lib/index.d.ts ] || exit 1'
 
-      - run: npm publish --access public
-        working-directory: ${{env.working-dir}}/main/
+      - name: publish
+        working-directory: ${{ github.workspace }}/main/
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
