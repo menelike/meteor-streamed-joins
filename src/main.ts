@@ -1,3 +1,4 @@
+import ChangeStream from './ChangeStream';
 import MongoObserver from './MongoObserver';
 
 export type {
@@ -7,4 +8,4 @@ export type {
 } from './types';
 export type { ChangeEventMeteor } from './ChangeStreamMultiplexer';
 
-export { MongoObserver };
+export { MongoObserver, ChangeStream };
