@@ -25,6 +25,7 @@ const SOURCE_NAME = 'threads';
 const DRAIN_NAME = 'users';
 
 let mongoObserver: MongoObserver | undefined;
+let changeStream: ChangeStream | undefined;
 
 const firstThreadId = new ObjectID().toHexString();
 const secondThreadId = new ObjectID().toHexString();
@@ -124,10 +125,14 @@ afterEach(async () => {
     mongoObserver.stop();
     mongoObserver = undefined;
   }
+  if (changeStream) {
+    changeStream.stop();
+    changeStream = undefined;
+  }
+
   const db = mongoDB.db();
   await db.collection(SOURCE_NAME).deleteMany({});
   await db.collection(DRAIN_NAME).deleteMany({});
-  jest.clearAllMocks();
 });
 
 afterAll(async () => {
@@ -136,7 +141,7 @@ afterAll(async () => {
 
 describe('MongoObserver', () => {
   it('handle added on observe()', () => {
-    expect.assertions(4);
+    expect.assertions(6);
 
     let callback: MeteorObserveCallbacks | undefined;
     const cursorMock = {
@@ -162,10 +167,12 @@ describe('MongoObserver', () => {
     callback.added(threads[1]);
     expect(observeCallbacks.added).toHaveBeenNthCalledWith(2, threads[1]);
     expect(watchObserveCallBacks.added).toHaveBeenNthCalledWith(2, [userDId]);
+    expect(observeCallbacks.added).toHaveBeenCalledTimes(2);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
   });
 
   it('handle added on observeChanges()', () => {
-    expect.assertions(4);
+    expect.assertions(5);
 
     let callback: MeteorObserveChangesCallbacks | undefined;
     const cursorMock = {
@@ -215,10 +222,11 @@ describe('MongoObserver', () => {
       }
     );
     expect(watchObserveCallBacks.added).toHaveBeenNthCalledWith(2, [userDId]);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
   });
 
   it('handle added and removed on observe()', () => {
-    expect.assertions(6);
+    expect.assertions(10);
 
     let callback: MeteorObserveCallbacks | undefined;
     const cursorMock = {
@@ -252,10 +260,14 @@ describe('MongoObserver', () => {
       userBId,
       userCId,
     ]);
+    expect(observeCallbacks.added).toHaveBeenCalledTimes(2);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
+    expect(observeCallbacks.removed).toHaveBeenCalledTimes(1);
+    expect(watchObserveCallBacks.removed).toHaveBeenCalledTimes(1);
   });
 
   it('handle added and removed on observeChanges()', () => {
-    expect.assertions(6);
+    expect.assertions(10);
 
     let callback: MeteorObserveChangesCallbacks | undefined;
     const cursorMock = {
@@ -316,10 +328,14 @@ describe('MongoObserver', () => {
       userBId,
       userCId,
     ]);
+    expect(observeChangesCallbacks.added).toHaveBeenCalledTimes(2);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
+    expect(observeChangesCallbacks.removed).toHaveBeenCalledTimes(1);
+    expect(watchObserveCallBacks.removed).toHaveBeenCalledTimes(1);
   });
 
   it('handle added and changed on observe()', () => {
-    expect.assertions(5);
+    expect.assertions(8);
 
     let callback: MeteorObserveCallbacks | undefined;
     const cursorMock = {
@@ -357,10 +373,13 @@ describe('MongoObserver', () => {
     );
     expect(watchObserveCallBacks.added).toHaveBeenNthCalledWith(2, [userDId]);
     expect(watchObserveCallBacks.removed).toHaveBeenNthCalledWith(1, [userBId]);
+    expect(observeCallbacks.added).toHaveBeenCalledTimes(1);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
+    expect(observeCallbacks.changed).toHaveBeenCalledTimes(1);
   });
 
   it('handle added and changed on observeChanges()', () => {
-    expect.assertions(5);
+    expect.assertions(8);
 
     let callback: MeteorObserveChangesCallbacks | undefined;
     const cursorMock = {
@@ -414,10 +433,13 @@ describe('MongoObserver', () => {
     );
     expect(watchObserveCallBacks.added).toHaveBeenNthCalledWith(2, [userDId]);
     expect(watchObserveCallBacks.removed).toHaveBeenNthCalledWith(1, [userBId]);
+    expect(observeChangesCallback.added).toHaveBeenCalledTimes(1);
+    expect(watchObserveCallBacks.added).toHaveBeenCalledTimes(2);
+    expect(observeChangesCallback.changed).toHaveBeenCalledTimes(1);
   });
 
   it('handle db changes in drain on observe()', async () => {
-    expect.assertions(1);
+    expect.assertions(3);
 
     let callback: MeteorObserveCallbacks | undefined;
     const cursorMock = {
@@ -434,26 +456,46 @@ describe('MongoObserver', () => {
     if (!callback) throw Error('callback not set');
     const drainCollection = mongoDB.db().collection(DRAIN_NAME);
 
-    const changeStream = new ChangeStream(mongoObserver);
-    changeStream.observe(drainCollection, watchObserveCallBacks);
+    changeStream = new ChangeStream(mongoObserver);
+    changeStream.observe(drainCollection, watchObserveCallBacks, {
+      fields: { name: 1, 'nested.bar': 1 },
+    });
 
     await sleep(DEFAULT_WAIT_IN_MS);
     await drainCollection.updateOne(
       { _id: userAId },
-      { $set: { name: 'changed' } }
+      { $set: { name: 'changed', 'nested.foo': 'test' } }
     );
     await sleep(DEFAULT_WAIT_IN_MS);
     expect(watchObserveCallBacks.changed).toHaveBeenNthCalledWith(
       1,
       userAId,
-      { name: 'changed' },
+      { name: 'changed', nested: { foo: 'test' } },
       false,
       expect.anything()
     );
+
+    await drainCollection.replaceOne(
+      { _id: userAId },
+      {
+        _id: userAId,
+        name: 'changedAgain',
+        nested: { foo: 'changed' },
+      }
+    );
+    await sleep(DEFAULT_WAIT_IN_MS);
+    expect(watchObserveCallBacks.changed).toHaveBeenNthCalledWith(
+      2,
+      userAId,
+      { name: 'changedAgain', nested: { foo: 'changed' } },
+      true,
+      expect.anything()
+    );
+    expect(watchObserveCallBacks.changed).toHaveBeenCalledTimes(2);
   });
 
   it('handle db changes in drain on observeChanges()', async () => {
-    expect.assertions(1);
+    expect.assertions(3);
 
     let callback: MeteorObserveChangesCallbacks | undefined;
     const cursorMock = {
@@ -474,22 +516,42 @@ describe('MongoObserver', () => {
     if (!callback) throw Error('callback not set');
     const drainCollection = mongoDB.db().collection(DRAIN_NAME);
 
-    const changeStream = new ChangeStream(mongoObserver);
-    changeStream.observe(drainCollection, watchObserveCallBacks);
+    changeStream = new ChangeStream(mongoObserver);
+    changeStream.observe(drainCollection, watchObserveCallBacks, {
+      fields: { name: 1, 'nested.bar': 1 },
+    });
 
     await sleep(DEFAULT_WAIT_IN_MS);
     await drainCollection.updateOne(
       { _id: userAId },
-      { $set: { name: 'changed' } }
+      { $set: { name: 'changed', 'nested.bar': 'test' } }
     );
     await sleep(DEFAULT_WAIT_IN_MS);
     expect(watchObserveCallBacks.changed).toHaveBeenNthCalledWith(
       1,
       userAId,
-      { name: 'changed' },
+      { name: 'changed', nested: { bar: 'test' } },
       false,
       expect.anything()
     );
+
+    await drainCollection.replaceOne(
+      { _id: userAId },
+      {
+        _id: userAId,
+        name: 'changedAgain',
+        nested: { bar: 'changed' },
+      }
+    );
+    await sleep(DEFAULT_WAIT_IN_MS);
+    expect(watchObserveCallBacks.changed).toHaveBeenNthCalledWith(
+      2,
+      userAId,
+      { name: 'changedAgain', nested: { bar: 'changed' } },
+      true,
+      expect.anything()
+    );
+    expect(watchObserveCallBacks.changed).toHaveBeenCalledTimes(2);
   });
 
   it('close handle', () => {
@@ -698,7 +760,7 @@ describe('MongoObserver', () => {
   });
 
   it('do not call registry on undefined foreign keys on observeChanges()', () => {
-    expect.assertions(3);
+    expect.assertions(4);
 
     let callback: MeteorObserveChangesCallbacks | undefined;
     const cursorMock = {
@@ -729,5 +791,6 @@ describe('MongoObserver', () => {
       1,
       'testId'
     );
+    expect(mongoObserver.foreignKeyRegistry.remove).toHaveBeenCalledTimes(1);
   });
 });
