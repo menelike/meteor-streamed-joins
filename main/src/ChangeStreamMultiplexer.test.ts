@@ -72,7 +72,13 @@ describe('ChangeStreamMultiplexer', () => {
     expect.assertions(5);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
-    const document = { _id: new ObjectID().toHexString(), name: 'foo' };
+    const document = {
+      _id: new ObjectID().toHexString(),
+      name: 'foo',
+      nested: {
+        bar: 'test',
+      },
+    };
     await collection.insertOne(document);
     multiplexer = new ChangeStreamMultiplexer(collection);
     const listener = {
@@ -87,24 +93,27 @@ describe('ChangeStreamMultiplexer', () => {
 
     await collection.updateOne(
       { _id: document._id },
-      { $set: { name: 'changedFoo' } }
+      { $set: { name: 'changedFoo', 'nested.bar': 'changedTest' } }
     );
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
-    expect(listener.changed.mock.calls[0][1]).toEqual({ name: 'changedFoo' });
+    expect(listener.changed.mock.calls[0][1]).toEqual({
+      name: 'changedFoo',
+      'nested.bar': 'changedTest',
+    });
     expect(listener.changed.mock.calls[0][2]).toBeFalsy();
     expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'update',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
       updateDescription: {
-        updatedFields: { name: 'changedFoo' },
+        updatedFields: { name: 'changedFoo', 'nested.bar': 'changedTest' },
         removedFields: [],
       },
-      meteor: { fields: { name: 'changedFoo' } },
+      meteor: { fields: { name: 'changedFoo', 'nested.bar': 'changedTest' } },
     });
   });
 
@@ -125,20 +134,30 @@ describe('ChangeStreamMultiplexer', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne({ _id: document._id }, { name: 'changedFoo' });
+    await collection.replaceOne(
+      { _id: document._id },
+      { name: 'changedFoo', nested: { bar: 'changed' } }
+    );
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     expect(listener.changed.mock.calls.length).toBe(1);
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
-    expect(listener.changed.mock.calls[0][1]).toEqual({ name: 'changedFoo' });
+    expect(listener.changed.mock.calls[0][1]).toEqual({
+      name: 'changedFoo',
+      nested: { bar: 'changed' },
+    });
     expect(listener.changed.mock.calls[0][2]).toBeTruthy();
     expect(listener.changed.mock.calls[0][3]).toMatchObject({
       operationType: 'replace',
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
-      fullDocument: { _id: document._id, name: 'changedFoo' },
-      meteor: { fields: { name: 'changedFoo' } },
+      fullDocument: {
+        _id: document._id,
+        name: 'changedFoo',
+        nested: { bar: 'changed' },
+      },
+      meteor: { fields: { name: 'changedFoo', nested: { bar: 'changed' } } },
     });
   });
 
@@ -150,6 +169,9 @@ describe('ChangeStreamMultiplexer', () => {
       _id: new ObjectID().toHexString(),
       name: 'foo',
       toRemove: 'deleteMe',
+      nested: {
+        bar: 'test',
+      },
     };
     await collection.insertOne(document);
     multiplexer = new ChangeStreamMultiplexer(collection);
