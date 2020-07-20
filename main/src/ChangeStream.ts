@@ -3,7 +3,6 @@ import type { Collection } from 'mongodb';
 import ChangeStreamRegistry from './ChangeStreamRegistry';
 import type MongoObserver from './MongoObserver';
 import type { WatchObserveCallBacks, MongoDoc } from './types';
-import convertDottedToObject from './utils/convertDottedToObject';
 import filterFields from './utils/filterFields';
 import type { FieldProjection } from './utils/filterFields';
 
@@ -40,7 +39,6 @@ class ChangeStream<T extends MongoDoc = MongoDoc> {
         } else {
           nextFields = fields;
         }
-        nextFields = convertDottedToObject<T>(nextFields);
 
         if (Object.keys(nextFields).length) {
           watchObserveCallBack.changed(_id, nextFields, replace, next);
