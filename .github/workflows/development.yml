@@ -81,6 +81,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-18.04
+    if: github.event.pull_request.draft == false
 
     steps:
       - uses: actions/setup-node@v1
