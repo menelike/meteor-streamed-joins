@@ -1,5 +1,4 @@
 import { Db, MongoClient } from 'mongodb';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { MongoMemoryReplSet as _MongoMemoryReplSet } from 'mongodb-memory-server';
 
@@ -37,7 +36,6 @@ class MongoMemoryReplSet {
         dbName,
       },
       binary: {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         skipMD5: true,
       },

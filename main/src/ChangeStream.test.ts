@@ -301,16 +301,16 @@ describe('ChangeStream', () => {
     };
 
     changeStream.observe(collection, listener);
+    if (!callback) throw Error('callback not set');
+
     try {
-      // eslint-disable-next-line no-unused-expressions
-      callback?.added([]);
+      callback.added([]);
     } catch (err) {
       expect(err.toString()).toBe('Error: not supported');
     }
 
     try {
-      // eslint-disable-next-line no-unused-expressions
-      callback?.removed([]);
+      callback.removed([]);
     } catch (err) {
       expect(err.toString()).toBe('Error: not supported');
     }

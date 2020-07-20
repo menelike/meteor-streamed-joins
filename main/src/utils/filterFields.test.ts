@@ -20,7 +20,6 @@ describe('filterFields', () => {
   it('throw error in mixed projection', () => {
     expect.assertions(1);
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(() => filterFields({ fieldA: 1, fieldB: -1 }, {})).toThrowError(
       'field projections should not have mixed flags (-1 and 1)'
@@ -85,32 +84,29 @@ describe('filterFields', () => {
       filterFields(
         { 'nested.FieldA': 1, 'nested.FieldB': 1 },
         {
-          'nested.FieldA': 1,
-          'nested.FieldB': 2,
+          nested: { FieldA: 1, FieldB: 2 },
         }
       )
     ).toEqual({
-      'nested.FieldA': 1,
-      'nested.FieldB': 2,
+      nested: { FieldA: 1, FieldB: 2 },
     });
 
     expect(
       filterFields(
         { 'nested.FieldA': 1 },
         {
-          'nested.FieldA': 1,
-          'nested.FieldB': 2,
+          nested: { FieldA: 1, FieldB: 2 },
         }
       )
     ).toEqual({
-      'nested.FieldA': 1,
+      nested: { FieldA: 1 },
     });
 
     expect(
       filterFields(
         { 'nested.FieldA': 1 },
         {
-          'nested.FieldAB': 1,
+          nested: { FieldAB: 1 },
         }
       )
     ).toEqual({});
@@ -119,10 +115,12 @@ describe('filterFields', () => {
       filterFields(
         { 'nested.FieldA': 1 },
         {
-          'nested.FieldA.foo': 1,
+          nested: { FieldA: { foo: 1 } },
         }
       )
-    ).toEqual({ 'nested.FieldA.foo': 1 });
+    ).toEqual({
+      nested: { FieldA: { foo: 1 } },
+    });
   });
 
   it('filter denied fields', () => {
@@ -154,20 +152,26 @@ describe('filterFields', () => {
       filterFields(
         { 'nested.FieldA': -1 },
         {
-          'nested.FieldA': 1,
-          'nested.FieldB': 2,
+          nested: {
+            FieldA: 1,
+            FieldB: 2,
+          },
         }
       )
     ).toEqual({
-      'nested.FieldB': 2,
+      nested: {
+        FieldB: 2,
+      },
     });
 
     expect(
       filterFields(
         { nested: -1 },
         {
-          'nested.FieldA': 1,
-          'nested.FieldB': 2,
+          nested: {
+            FieldA: 1,
+            FieldB: 2,
+          },
         }
       )
     ).toEqual({});
@@ -176,19 +180,24 @@ describe('filterFields', () => {
       filterFields(
         { 'nested.FieldA': -1 },
         {
-          'nested.FieldAB': 1,
+          nested: { FieldAB: 1 },
         }
       )
-    ).toEqual({ 'nested.FieldAB': 1 });
+    ).toEqual({
+      nested: {
+        FieldAB: 1,
+      },
+    });
 
     expect(
       filterFields(
         { 'nested.FieldA': -1 },
         {
-          'nested.FieldA.foo': 1,
-          'nested.FieldB.bar': 1,
+          nested: { FieldA: { foo: 1 }, FieldB: { bar: 1 } },
         }
       )
-    ).toEqual({ 'nested.FieldB.bar': 1 });
+    ).toEqual({
+      nested: { FieldB: { bar: 1 } },
+    });
   });
 });

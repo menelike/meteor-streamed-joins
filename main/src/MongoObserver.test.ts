@@ -458,7 +458,7 @@ describe('MongoObserver', () => {
 
     changeStream = new ChangeStream(mongoObserver);
     changeStream.observe(drainCollection, watchObserveCallBacks, {
-      fields: { name: 1, 'nested.bar': 1 },
+      fields: { name: 1, 'nested.foo': 1 },
     });
 
     await sleep(DEFAULT_WAIT_IN_MS);

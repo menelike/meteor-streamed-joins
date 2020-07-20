@@ -1,12 +1,14 @@
+// @ts-ignore
+import EJSON from 'ejson';
 import type {
   ChangeEventCR,
-  ChangeEventDelete,
   ChangeEventUpdate,
   ChangeStream,
   Collection,
 } from 'mongodb';
 
-import type { DefaultDoc, MongoDoc, WatchObserveCallBacks } from './types';
+import type { MongoDoc, WatchObserveCallBacks } from './types';
+import convertDottedToObject from './utils/convertDottedToObject';
 
 const STATIC_AGGREGATION_PIPELINE = [
   {
@@ -19,43 +21,11 @@ const STATIC_AGGREGATION_PIPELINE = [
       ],
     },
   },
-  {
-    $addFields: {
-      'meteor.fields': {
-        $mergeObjects: [
-          '$fullDocument', // use when replace
-          '$updateDescription.updatedFields', // used when update
-        ],
-      },
-    },
-  },
-  {
-    $project: {
-      'meteor.fields._id': 0,
-    },
-  },
 ];
 
-interface ChangeEventMeteorBase<T> {
-  meteor: { fields: Partial<T> & DefaultDoc };
-}
-
-interface ChangeEventCRMeteor<T extends MongoDoc = MongoDoc>
-  extends ChangeEventCR<T>,
-    ChangeEventMeteorBase<T> {}
-
-interface ChangeEventUpdateMeteor<T extends MongoDoc = MongoDoc>
-  extends ChangeEventUpdate<T>,
-    ChangeEventMeteorBase<T> {}
-
-interface ChangeEventDeleteMeteor<T extends MongoDoc = MongoDoc>
-  extends ChangeEventDelete<T>,
-    ChangeEventMeteorBase<T> {}
-
 export type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
-  | ChangeEventCRMeteor<T>
-  | ChangeEventUpdateMeteor<T>
-  | ChangeEventDeleteMeteor<T>;
+  | ChangeEventCR<T>
+  | ChangeEventUpdate<T>;
 
 class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   private readonly listeners: Set<WatchObserveCallBacks<T>>;
@@ -77,7 +47,6 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     /* istanbul ignore else */
     if (this.listeners.size && !this.changeStream) {
       this.changeStream = this.collection.watch(STATIC_AGGREGATION_PIPELINE);
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       this.changeStream.on('change', this.onChange);
     }
@@ -91,21 +60,42 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
+  // Todo remove JSON.stringify and mutate like EJSON.parse directly
   private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
-    const { fields } = next.meteor;
     this.listeners.forEach((listener) => {
-      if (
-        next.operationType === 'update' &&
-        Array.isArray(next.updateDescription.removedFields)
-      ) {
+      if (next.operationType === 'update') {
+        const { updatedFields: fields, removedFields } = next.updateDescription;
         // mongo doesn't support undefined
         // otherwise this could have been done in the aggregation pipeline
-        next.updateDescription.removedFields.forEach((f) => {
+        removedFields.forEach((f) => {
           fields[f] = undefined;
         });
+
+        listener.changed(
+          _id,
+          EJSON.parse(
+            JSON.stringify(convertDottedToObject<Partial<T>>(fields))
+          ),
+          false,
+          next
+        );
+      } else if (next.operationType === 'replace') {
+        const { fullDocument } = next;
+        if (fullDocument) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { _id: unused, ...fields } = fullDocument;
+          listener.changed(
+            _id,
+            EJSON.parse(JSON.stringify(fields)),
+            true,
+            next
+          );
+        } else {
+          // Todo types say this case can happen, but it doesn't make any sense
+          listener.changed(_id, {}, true, next);
+        }
       }
-      listener.changed(_id, fields, next.operationType === 'replace', next);
     });
   };
 

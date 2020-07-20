@@ -102,7 +102,9 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listener.changed.mock.calls[0][0]).toBe(document._id);
     expect(listener.changed.mock.calls[0][1]).toEqual({
       name: 'changedFoo',
-      'nested.bar': 'changedTest',
+      nested: {
+        bar: 'changedTest',
+      },
     });
     expect(listener.changed.mock.calls[0][2]).toBeFalsy();
     expect(listener.changed.mock.calls[0][3]).toMatchObject({
@@ -113,7 +115,6 @@ describe('ChangeStreamMultiplexer', () => {
         updatedFields: { name: 'changedFoo', 'nested.bar': 'changedTest' },
         removedFields: [],
       },
-      meteor: { fields: { name: 'changedFoo', 'nested.bar': 'changedTest' } },
     });
   });
 
@@ -157,7 +158,6 @@ describe('ChangeStreamMultiplexer', () => {
         name: 'changedFoo',
         nested: { bar: 'changed' },
       },
-      meteor: { fields: { name: 'changedFoo', nested: { bar: 'changed' } } },
     });
   });
 
@@ -207,7 +207,6 @@ describe('ChangeStreamMultiplexer', () => {
         updatedFields: { name: 'changedFoo' },
         removedFields: ['toRemove'],
       },
-      meteor: { fields: { name: 'changedFoo', toRemove: undefined } },
     });
   });
 
@@ -253,7 +252,65 @@ describe('ChangeStreamMultiplexer', () => {
       ns: { db: 'undefined', coll: 'test' },
       documentKey: { _id: document._id },
       fullDocument: { _id: document._id, name: 'changedFoo' },
-      meteor: { fields: { name: 'changedFoo' } },
     });
+  });
+
+  it('ignore unknown operation', () => {
+    expect.assertions(3);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    multiplexer = new ChangeStreamMultiplexer(collection);
+    const listener = {
+      added: jest.fn(),
+      changed: jest.fn(),
+      removed: jest.fn(),
+    };
+
+    multiplexer.addListener(listener);
+
+    // @ts-ignore
+    multiplexer.onChange({
+      // @ts-ignore
+      operationType: 'unknown',
+      documentKey: {
+        _id: new ObjectID().toHexString(),
+      },
+    });
+
+    expect(listener.added).toHaveBeenCalledTimes(0);
+    expect(listener.changed).toHaveBeenCalledTimes(0);
+    expect(listener.removed).toHaveBeenCalledTimes(0);
+  });
+
+  it('receive undefined fullDocument on replace', () => {
+    expect.assertions(6);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    multiplexer = new ChangeStreamMultiplexer(collection);
+    const listener = {
+      added: jest.fn(),
+      changed: jest.fn(),
+      removed: jest.fn(),
+    };
+
+    multiplexer.addListener(listener);
+
+    const _id = new ObjectID().toHexString();
+    // @ts-ignore
+    multiplexer.onChange({
+      // @ts-ignore
+      operationType: 'replace',
+      documentKey: {
+        _id,
+      },
+      fullDocument: undefined,
+    });
+
+    expect(listener.added).toHaveBeenCalledTimes(0);
+    expect(listener.removed).toHaveBeenCalledTimes(0);
+    expect(listener.changed.mock.calls.length).toBe(1);
+    expect(listener.changed.mock.calls[0][0]).toBe(_id);
+    expect(listener.changed.mock.calls[0][1]).toEqual({});
+    expect(listener.changed.mock.calls[0][2]).toBeTruthy();
   });
 });
