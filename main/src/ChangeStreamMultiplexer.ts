@@ -60,43 +60,46 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
+  private onChanged = (
+    _id: string,
+    fields: Partial<T>,
+    replace: boolean,
+    op: ChangeEventMeteor<T>
+  ): void => {
+    this.listeners.forEach((listener) => {
+      listener.changed(_id, fields, replace, op);
+    });
+  };
+
   // Todo remove JSON.stringify and mutate like EJSON.parse directly
   private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
-    this.listeners.forEach((listener) => {
-      if (next.operationType === 'update') {
-        const { updatedFields: fields, removedFields } = next.updateDescription;
-        // mongo doesn't support undefined
-        // otherwise this could have been done in the aggregation pipeline
-        removedFields.forEach((f) => {
-          fields[f] = undefined;
-        });
 
-        listener.changed(
-          _id,
-          EJSON.parse(
-            JSON.stringify(convertDottedToObject<Partial<T>>(fields))
-          ),
-          false,
-          next
-        );
-      } else if (next.operationType === 'replace') {
-        const { fullDocument } = next;
-        if (fullDocument) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { _id: unused, ...fields } = fullDocument;
-          listener.changed(
-            _id,
-            EJSON.parse(JSON.stringify(fields)),
-            true,
-            next
-          );
-        } else {
-          // Todo types say this case can happen, but it doesn't make any sense
-          listener.changed(_id, {}, true, next);
-        }
+    if (next.operationType === 'update') {
+      const { updatedFields: fields, removedFields } = next.updateDescription;
+      // mongo doesn't support undefined
+      // otherwise this could have been done in the aggregation pipeline
+      removedFields.forEach((f) => {
+        fields[f] = undefined;
+      });
+
+      this.onChanged(
+        _id,
+        EJSON.parse(JSON.stringify(convertDottedToObject<Partial<T>>(fields))),
+        false,
+        next
+      );
+    } else if (next.operationType === 'replace') {
+      const { fullDocument } = next;
+      if (fullDocument) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { _id: unused, ...fields } = fullDocument;
+        this.onChanged(_id, EJSON.parse(JSON.stringify(fields)), true, next);
+      } else {
+        // Todo types say this case can happen, but it doesn't make any sense
+        this.onChanged(_id, {}, true, next);
       }
-    });
+    }
   };
 
   // used in tests
