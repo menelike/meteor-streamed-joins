@@ -187,8 +187,10 @@ class Link<T extends MongoDoc = MongoDoc> {
       }
     );
     this.children.observe();
+    this.context.onStop(this.stop);
   }
 
+  /** @internal */
   public stop(): boolean {
     if (this.stopListener) {
       this.stopListener();

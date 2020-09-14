@@ -15,9 +15,5 @@ Meteor.publish('threads', function threadsPublication() {
   root.link<Meteor.User>(Meteor.users, (doc) => doc?.userIds);
   root.observe();
 
-  this.onStop(() => {
-    root.stop();
-  });
-
   this.ready();
 });
