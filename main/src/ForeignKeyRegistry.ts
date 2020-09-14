@@ -14,23 +14,37 @@ class ForeignKeyRegistry {
     this.removed = new Set();
   }
 
-  public replace(from: string, to: Array<string>): void {
-    const added = to.filter(
-      (foreignKey) => !this.sourceToDrain[from].has(foreignKey)
-    );
-    this.add(from, added);
+  private assembleKey = (id: string, sourceId: string): string => {
+    return `${id}:${sourceId}`;
+  };
 
-    const removed = [...this.sourceToDrain[from].values()].filter(
+  private disAssembleKey = (key: string): [string, string] => {
+    const s = key.split(':');
+    /* istanbul ignore next */
+    if (s.length !== 2) throw Error(`invalid key format: ${key}`);
+    return [s[0], s[1]];
+  };
+
+  public replace(id: string, sourceId: string, to: Array<string>): void {
+    const key = this.assembleKey(id, sourceId);
+
+    const added = to.filter(
+      (foreignKey) => !this.sourceToDrain[key]?.has(foreignKey)
+    );
+    this.add(id, sourceId, added);
+
+    const removed = [...(this.sourceToDrain[key]?.values() || [])].filter(
       (foreignKey) => !to.includes(foreignKey)
     );
     removed.forEach((foreignKey) => {
-      this.sourceToDrain[from].delete(foreignKey);
+      this.sourceToDrain[key].delete(foreignKey);
     });
-    this._remove(from, removed);
+    this._remove(id, sourceId, removed);
   }
 
-  private _remove(from: string, to: Array<string>): void {
+  private _remove(id: string, sourceId: string, to: Array<string>): void {
     if (!to.length) return;
+    const key = this.assembleKey(id, sourceId);
 
     to.forEach((foreignKey) => {
       if (this.drainToSource[foreignKey].size === 1) {
@@ -41,20 +55,21 @@ class ForeignKeyRegistry {
         }
         delete this.drainToSource[foreignKey];
       } else {
-        this.drainToSource[foreignKey].delete(foreignKey);
+        this.drainToSource[foreignKey].delete(key);
       }
     });
   }
 
-  public add(from: string, to: Array<string>): void {
+  public add(id: string, sourceId: string, to: Array<string>): void {
     if (!to.length) return;
+    const key = this.assembleKey(id, sourceId);
 
-    if (from in this.sourceToDrain) {
+    if (key in this.sourceToDrain) {
       to.forEach((foreignKey) => {
-        this.sourceToDrain[from].add(foreignKey);
+        this.sourceToDrain[key].add(foreignKey);
       });
     } else {
-      this.sourceToDrain[from] = new Set(to);
+      this.sourceToDrain[key] = new Set(to);
     }
 
     to.forEach((foreignKey) => {
@@ -67,20 +82,35 @@ class ForeignKeyRegistry {
       }
 
       if (foreignKey in this.drainToSource) {
-        this.drainToSource[foreignKey].add(foreignKey);
+        this.drainToSource[foreignKey].add(key);
       } else {
-        this.drainToSource[foreignKey] = new Set([from]);
+        this.drainToSource[foreignKey] = new Set([key]);
       }
     });
   }
 
-  public remove(from: string): void {
-    this._remove(from, [...this.sourceToDrain[from].values()]);
-    delete this.sourceToDrain[from];
+  public remove(id: string, sourceId: string): void {
+    const key = this.assembleKey(id, sourceId);
+    this._remove(id, sourceId, [...this.sourceToDrain[key]]);
+    delete this.sourceToDrain[key];
   }
 
-  public hasForeignKey(foreignKey: string): boolean {
-    return foreignKey in this.drainToSource;
+  public isPrimaryForForeignKey(id: string, foreignKey: string): boolean {
+    if (!(foreignKey in this.drainToSource)) return false;
+    const firstKey = [...this.drainToSource[foreignKey]][0];
+    const [_id] = this.disAssembleKey(firstKey);
+
+    return _id === id;
+  }
+
+  public hasForeignKey(id: string, foreignKey: string): boolean {
+    return (
+      foreignKey in this.drainToSource &&
+      [...this.drainToSource[foreignKey]].some((key) => {
+        const [_id] = this.disAssembleKey(key);
+        return _id === id;
+      })
+    );
   }
 
   public clear(): void {

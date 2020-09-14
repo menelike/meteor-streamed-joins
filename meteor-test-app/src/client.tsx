@@ -8,24 +8,24 @@ Meteor.subscribe('threads');
 
 Threads.find({}).observe({
   added(document) {
-    console.debug('added', document);
+    console.log('added thread', document);
   },
   changed(newDocument, oldDocument) {
-    console.debug('changed', newDocument, oldDocument);
+    console.log('changed thread', newDocument, oldDocument);
   },
   removed(oldDocument) {
-    console.debug('removed', oldDocument);
+    console.log('removed thread', oldDocument);
   },
 });
 
 Meteor.users.find({}).observe({
   added(document) {
-    console.log('added', document);
+    console.log('added user', document);
   },
   changed(newDocument, oldDocument) {
-    console.log('changed', newDocument, oldDocument);
+    console.log('changed user', newDocument, oldDocument);
   },
   removed(oldDocument) {
-    console.log('removed', oldDocument);
+    console.log('removed user', oldDocument);
   },
 });

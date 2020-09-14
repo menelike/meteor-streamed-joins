@@ -2,33 +2,51 @@
 import EJSON from 'ejson';
 import type {
   ChangeEventCR,
+  ChangeEventDelete,
   ChangeEventUpdate,
   ChangeStream,
   Collection,
 } from 'mongodb';
 
-import type { MongoDoc, WatchObserveCallBacks } from './types';
+import type { ChangeStreamCallBacks, MongoDoc, WithoutId } from './types';
 import convertDottedToObject from './utils/convertDottedToObject';
+
+const bindEnvironment =
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  global.Meteor?.bindEnvironment || (<T = Function>(func: T): T => func);
+
+interface FullDocumentChangeEventUpdate<
+  TSchema extends { [key: string]: any } = any
+> extends ChangeEventUpdate<TSchema> {
+  fullDocument: TSchema;
+}
+
+interface FullDocumentChangeEventCR<
+  TSchema extends { [key: string]: any } = any
+> extends ChangeEventCR<TSchema> {
+  fullDocument: TSchema;
+}
 
 const STATIC_AGGREGATION_PIPELINE = [
   {
     $match: {
       $or: [
-        // don't handle inserts and deletes
-        // rely on foreign key consistency
+        { operationType: 'insert' },
         { operationType: 'update' },
         { operationType: 'replace' },
+        { operationType: 'delete' },
       ],
     },
   },
 ];
 
 export type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
-  | ChangeEventCR<T>
-  | ChangeEventUpdate<T>;
+  | FullDocumentChangeEventCR<T>
+  | FullDocumentChangeEventUpdate<T>
+  | ChangeEventDelete<T>;
 
 class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
-  private readonly listeners: Set<WatchObserveCallBacks<T>>;
+  private readonly listeners: Set<ChangeStreamCallBacks<T>>;
 
   private readonly collection: Collection;
 
@@ -46,9 +64,11 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   private startIfNeeded(): void {
     /* istanbul ignore else */
     if (this.listeners.size && !this.changeStream) {
-      this.changeStream = this.collection.watch(STATIC_AGGREGATION_PIPELINE);
+      this.changeStream = this.collection.watch(STATIC_AGGREGATION_PIPELINE, {
+        fullDocument: 'updateLookup',
+      });
       // @ts-ignore
-      this.changeStream.on('change', this.onChange);
+      this.changeStream.on('change', bindEnvironment(this.onChange));
     }
   }
 
@@ -60,21 +80,45 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
-  private onChanged = (
+  private onInserted = (
     _id: string,
-    fields: Partial<T>,
-    replace: boolean,
-    op: ChangeEventMeteor<T>
+    fields: Partial<WithoutId<T>>,
+    op: ChangeEventCR<T>
   ): void => {
     this.listeners.forEach((listener) => {
-      listener.changed(_id, fields, replace, op);
+      listener.added(_id, fields, op);
     });
   };
 
-  // Todo remove JSON.stringify and mutate like EJSON.parse directly
+  private onChanged = (
+    _id: string,
+    fields: Partial<WithoutId<T>>,
+    doc: WithoutId<T>,
+    op: ChangeEventUpdate<T>
+  ): void => {
+    this.listeners.forEach((listener) => {
+      listener.changed(_id, fields, doc, op);
+    });
+  };
+
+  private onReplaced = (
+    _id: string,
+    doc: WithoutId<T>,
+    op: ChangeEventCR<T>
+  ): void => {
+    this.listeners.forEach((listener) => {
+      listener.replaced(_id, doc, op);
+    });
+  };
+
+  private onRemoved = (_id: string, op: ChangeEventDelete<T>): void => {
+    this.listeners.forEach((listener) => {
+      listener.removed(_id, op);
+    });
+  };
+
   private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
-
     if (next.operationType === 'update') {
       const { updatedFields: fields, removedFields } = next.updateDescription;
       // mongo doesn't support undefined
@@ -83,10 +127,15 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
         fields[f] = undefined;
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _id: unused, ...fullDocument } = next.fullDocument;
+
       this.onChanged(
         _id,
         EJSON.parse(JSON.stringify(convertDottedToObject<Partial<T>>(fields))),
-        false,
+        EJSON.parse(
+          JSON.stringify(convertDottedToObject<Partial<T>>(fullDocument))
+        ),
         next
       );
     } else if (next.operationType === 'replace') {
@@ -94,11 +143,17 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
       if (fullDocument) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { _id: unused, ...fields } = fullDocument;
-        this.onChanged(_id, EJSON.parse(JSON.stringify(fields)), true, next);
+        this.onReplaced(_id, EJSON.parse(JSON.stringify(fields)), next);
       } else {
-        // Todo types say this case can happen, but it doesn't make any sense
-        this.onChanged(_id, {}, true, next);
+        throw Error('received replace OP without a full document');
       }
+    } else if (next.operationType === 'insert') {
+      const { fullDocument } = next;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _id: unused, ...doc } = fullDocument;
+      this.onInserted(_id, EJSON.parse(JSON.stringify(doc)), next);
+    } else if (next.operationType === 'delete') {
+      this.onRemoved(_id, next);
     }
   };
 
@@ -108,12 +163,12 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     this.stopIfUseless();
   }
 
-  public addListener = (listener: WatchObserveCallBacks<T>): void => {
+  public addListener = (listener: ChangeStreamCallBacks<T>): void => {
     this.listeners.add(listener);
     this.startIfNeeded();
   };
 
-  public removeListener = (listener: WatchObserveCallBacks<T>): void => {
+  public removeListener = (listener: ChangeStreamCallBacks<T>): void => {
     this.listeners.delete(listener);
     this.stopIfUseless();
   };
