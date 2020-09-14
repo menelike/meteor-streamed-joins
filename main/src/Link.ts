@@ -188,7 +188,7 @@ class Link<T extends MongoDoc = MongoDoc> {
       }
     );
     this.children.observe();
-    this.context.onStop(this.stop);
+    this.context.onStop(() => this.stop());
   }
 
   /** @internal */
