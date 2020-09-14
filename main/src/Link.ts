@@ -32,6 +32,7 @@ class Link<T extends MongoDoc = MongoDoc> {
 
   private readonly selector: Mongo.Selector<T>;
 
+  /** @internal */
   public readonly publicationContext: PublicationContext<T>;
 
   private readonly context: MeteorPublicationContext<T>;

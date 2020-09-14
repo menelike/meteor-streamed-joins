@@ -36,6 +36,7 @@ export class LinkChild<
     | ReturnType<typeof ChangeStreamRegistry.addListener>
     | undefined;
 
+  /** @internal */
   public readonly publicationContext: PublicationContext<T>;
 
   private readonly context: MeteorPublicationContext<T>;
