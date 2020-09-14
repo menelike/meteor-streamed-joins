@@ -4,9 +4,12 @@ interface MeteorPublicationMockInterface extends MeteorPublicationContext {
   added: jest.Mock;
   changed: jest.Mock;
   connection: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onClose: jest.Mock<any, any>;
     id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     httpHeaders: Record<string, any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     close: jest.Mock<any, any>;
     clientAddress: string;
   };

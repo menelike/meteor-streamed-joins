@@ -21,6 +21,7 @@ type Options<T extends MongoDoc = MongoDoc> = {
 class Link<T extends MongoDoc = MongoDoc> {
   private readonly children: ChildDeMultiplexer<T>;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly nodes: Set<Link<T> | LinkChild<any, any>>;
 
   private readonly matcher: Matcher<T>;
@@ -67,6 +68,7 @@ class Link<T extends MongoDoc = MongoDoc> {
   };
 
   /** @internal */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public setNode = (child: LinkChild<any, any>): void => {
     this.nodes.add(child);
   };
@@ -74,6 +76,7 @@ class Link<T extends MongoDoc = MongoDoc> {
   /** @internal */
   public getNode = (
     collectionName: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Link<T> | LinkChild<any, any> | undefined => {
     return [...this.nodes].find(
       (child) => child.publicationContext.collectionName === collectionName

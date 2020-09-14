@@ -16,12 +16,14 @@ const bindEnvironment =
   global.Meteor?.bindEnvironment || (<T = Function>(func: T): T => func);
 
 interface FullDocumentChangeEventUpdate<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TSchema extends { [key: string]: any } = any
 > extends ChangeEventUpdate<TSchema> {
   fullDocument: TSchema;
 }
 
 interface FullDocumentChangeEventCR<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TSchema extends { [key: string]: any } = any
 > extends ChangeEventCR<TSchema> {
   fullDocument: TSchema;

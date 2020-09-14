@@ -23,6 +23,7 @@ export class LinkChild<
 > {
   private readonly children: ChildDeMultiplexer<T>;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly parent: Link<P> | LinkChild<any, P>;
 
   private readonly fields: FieldProjection | undefined;
@@ -43,6 +44,7 @@ export class LinkChild<
     context: MeteorPublicationContext<T>,
     collection: Mongo.Collection<T>,
     resolver: ExtractPrimaryKeys<P>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parent: Link<P> | LinkChild<any, P>,
     options?: LinkChildOptions | undefined
   ) {
@@ -64,6 +66,7 @@ export class LinkChild<
   }
 
   /** @internal */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public root = (): Link<any> => {
     return this.parent.root();
   };

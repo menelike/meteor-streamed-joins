@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Mongo } from 'meteor/mongo';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';

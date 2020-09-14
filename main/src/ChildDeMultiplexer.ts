@@ -2,6 +2,7 @@ import type { LinkChild } from './LinkChild';
 import { MongoDoc, WithoutId } from './types';
 
 class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly children: Set<LinkChild<P, any>> = new Set();
 
   public link = <T extends MongoDoc = MongoDoc>(

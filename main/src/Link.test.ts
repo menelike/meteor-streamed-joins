@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Mongo } from 'meteor/mongo';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
@@ -16,6 +17,10 @@ const DEFAULT_WAIT_IN_MS = 250;
 const COLLECTION_NAME_ROOT = 'ROOT';
 
 let root: Link | undefined;
+
+type RootDocument = {
+  _id: string;
+};
 
 beforeAll(async () => {
   await mongoDB.connect();
