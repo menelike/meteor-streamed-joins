@@ -58,18 +58,18 @@ Meteor.setInterval(() => {
   }
 }, 5000);
 
-// Meteor.setInterval(() => {
-//   const uId = faker.random.arrayElement(userIds);
-//
-//   Meteor.users.update(
-//     { _id: uId },
-//     {
-//       $set: {
-//         profile: {
-//           firstName: faker.name.firstName(),
-//           lastName: faker.name.lastName(),
-//         },
-//       },
-//     }
-//   );
-// }, 3000);
+Meteor.setInterval(() => {
+  const uId = faker.random.arrayElement(userIds);
+
+  Meteor.users.update(
+    { _id: uId },
+    {
+      $set: {
+        profile: {
+          firstName: faker.name.firstName(),
+          lastName: faker.name.lastName(),
+        },
+      },
+    }
+  );
+}, 3000);
