@@ -149,7 +149,7 @@ describe('PublicationContext', () => {
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.clear();
 
-    context.changed('foreignKeyA', {});
+    context.changed('foreignKeyA', { some: 'thing' });
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
