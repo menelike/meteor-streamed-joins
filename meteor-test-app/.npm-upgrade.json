@@ -1,0 +1,8 @@
+{
+  "ignore": {
+    "faker": {
+      "versions": "5.x.x",
+      "reason": "wait for https://github.com/Marak/faker.js/issues/1002 to be solved"
+    }
+  }
+}

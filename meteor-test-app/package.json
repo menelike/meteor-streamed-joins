@@ -18,16 +18,16 @@
     }
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.5",
+    "@babel/runtime": "^7.11.2",
     "faker": "^4.1.0",
-    "meteor-node-stubs": "^1.0.0",
+    "meteor-node-stubs": "^1.0.1",
     "meteor-streamed-joins": "file:../main",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
   "devDependencies": {
-    "@types/faker": "^4.1.12",
-    "@types/meteor": "^1.4.47"
+    "@types/faker": "^5.1.0",
+    "@types/meteor": "^1.4.49"
   },
   "lint-staged": {
     "src/**/*.ts": "eslint"
