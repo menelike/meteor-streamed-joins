@@ -36,7 +36,7 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
   }
 
   public added = (foreignKey: string, doc: Partial<WithoutId<T>>): void => {
-    if (!this.addedForeignKeys.has(foreignKey)) return;
+    if (!this.addedChildrenIds.has(foreignKey)) return;
     this.context.added(this.collectionName, foreignKey, doc);
   };
 
@@ -45,13 +45,13 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     fields: Partial<WithoutId<T>>
   ): void => {
     if (Object.keys(fields).length === 0) return;
-    if (!this.foreignKeyRegistry.isPrimaryForForeignKey(this.id, foreignKey))
+    if (!this.foreignKeyRegistry.isPrimaryForChildId(this.id, foreignKey))
       return;
     this.context.changed(this.collectionName, foreignKey, fields);
   };
 
   public replaced = (foreignKey: string, doc: Partial<WithoutId<T>>): void => {
-    if (!this.foreignKeyRegistry.isPrimaryForForeignKey(this.id, foreignKey))
+    if (!this.foreignKeyRegistry.isPrimaryForChildId(this.id, foreignKey))
       return;
     // Todo request/implement replace in meteor publication
     this.context.removed(this.collectionName, foreignKey);
@@ -59,12 +59,12 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
   };
 
   public removed = (foreignKey: string): void => {
-    if (!this.removedForeignKeys.has(foreignKey)) return;
+    if (!this.removedChildrenIds.has(foreignKey)) return;
     this.context.removed(this.collectionName, foreignKey);
   };
 
-  public hasForeignKey(foreignKey: string): boolean {
-    return this.foreignKeyRegistry.hasForeignKey(this.id, foreignKey);
+  public hasChildId(foreignKey: string): boolean {
+    return this.foreignKeyRegistry.hasChildId(this.id, foreignKey);
   }
 
   public addToRegistry(sourceId: string, foreignKeys: Array<string>): void {
@@ -82,11 +82,11 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     this.foreignKeyRegistry.remove(this.id, sourceId);
   }
 
-  public get addedForeignKeys(): Set<string> {
+  public get addedChildrenIds(): Set<string> {
     return this.foreignKeyRegistry.added;
   }
 
-  public get removedForeignKeys(): Set<string> {
+  public get removedChildrenIds(): Set<string> {
     return this.foreignKeyRegistry.removed;
   }
 

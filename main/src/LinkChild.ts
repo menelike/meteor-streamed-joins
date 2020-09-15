@@ -102,12 +102,12 @@ export class LinkChild<
   public commit(): void {
     const added: Array<T> = [];
     const removed: Array<string> = [];
-    if (this.publicationContext.addedForeignKeys.size) {
+    if (this.publicationContext.addedChildrenIds.size) {
       this.collection
         .find(
           // @ts-ignore
           {
-            _id: { $in: [...this.publicationContext.addedForeignKeys] },
+            _id: { $in: [...this.publicationContext.addedChildrenIds] },
           },
           { fields: this.fields }
         )
@@ -117,8 +117,8 @@ export class LinkChild<
           this.publicationContext.added(_id, doc);
         });
     }
-    if (this.publicationContext.removedForeignKeys.size) {
-      this.publicationContext.removedForeignKeys.forEach((_id) => {
+    if (this.publicationContext.removedChildrenIds.size) {
+      this.publicationContext.removedChildrenIds.forEach((_id) => {
         this.publicationContext.removed(_id);
         removed.push(_id);
       });
@@ -166,7 +166,7 @@ export class LinkChild<
     fields: Partial<WithoutId<T>>,
     doc: WithoutId<T>
   ): void => {
-    if (!this.publicationContext.hasForeignKey(_id)) return;
+    if (!this.publicationContext.hasChildId(_id)) return;
     this.publicationContext.changed(_id, this.filterFields(fields));
     this.children.parentChanged(_id, doc);
     this.commit();
@@ -175,7 +175,7 @@ export class LinkChild<
   // handle replace events from change streams
   /** @internal */
   public replaced = (_id: string, doc: WithoutId<T>): void => {
-    if (!this.publicationContext.hasForeignKey(_id)) return;
+    if (!this.publicationContext.hasChildId(_id)) return;
     this.publicationContext.replaced(_id, this.filterFields(doc));
     this.children.parentChanged(_id, doc);
     this.commit();

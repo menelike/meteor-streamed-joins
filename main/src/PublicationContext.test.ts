@@ -19,10 +19,10 @@ describe('PublicationContext', () => {
     );
 
     context.addToRegistry('key', ['a']);
-    expect(context.addedForeignKeys).toEqual(new Set('a'));
+    expect(context.addedChildrenIds).toEqual(new Set('a'));
     context.clear();
     context.removeFromRegistry('key');
-    expect(context.removedForeignKeys).toEqual(new Set('a'));
+    expect(context.removedChildrenIds).toEqual(new Set('a'));
   });
 
   it('sets foreignKeyRegistry as arg', () => {
@@ -35,8 +35,8 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
 
-    expect(context.addedForeignKeys).toBe(foreignKeyRegistry.added);
-    expect(context.removedForeignKeys).toBe(foreignKeyRegistry.removed);
+    expect(context.addedChildrenIds).toBe(foreignKeyRegistry.added);
+    expect(context.removedChildrenIds).toBe(foreignKeyRegistry.removed);
   });
 
   it('adds foreignKey', () => {
@@ -54,14 +54,14 @@ describe('PublicationContext', () => {
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
-    expect(context.addedForeignKeys).toEqual(new Set());
-    expect(context.removedForeignKeys).toEqual(new Set());
-    expect(context.hasForeignKey('foreignKeyA')).toBeFalsy();
+    expect(context.addedChildrenIds).toEqual(new Set());
+    expect(context.removedChildrenIds).toEqual(new Set());
+    expect(context.hasChildId('foreignKeyA')).toBeFalsy();
 
     context.addToRegistry('testSource', ['foreignKeyA']);
-    expect(context.hasForeignKey('foreignKeyA')).toBeTruthy();
-    expect(context.addedForeignKeys).toEqual(new Set(['foreignKeyA']));
-    expect(context.removedForeignKeys).toEqual(new Set());
+    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
+    expect(context.addedChildrenIds).toEqual(new Set(['foreignKeyA']));
+    expect(context.removedChildrenIds).toEqual(new Set());
 
     const doc = {};
     context.added('foreignKeyA', doc);
@@ -85,9 +85,9 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
 
-    expect(context.hasForeignKey('foreignKeyA')).toBeFalsy();
+    expect(context.hasChildId('foreignKeyA')).toBeFalsy();
     context.addToRegistry('testSourceId', ['foreignKeyA']);
-    expect(context.hasForeignKey('foreignKeyA')).toBeTruthy();
+    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
   });
 
   it('calls clear before adding', () => {
@@ -103,9 +103,9 @@ describe('PublicationContext', () => {
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.clear();
 
-    expect(context.hasForeignKey('foreignKeyA')).toBeTruthy();
+    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
     expect(
-      foreignKeyRegistry.isPrimaryForForeignKey(context.id, 'foreignKeyA')
+      foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
     ).toBeTruthy();
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
@@ -213,13 +213,13 @@ describe('PublicationContext', () => {
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.clear();
-    expect(context.hasForeignKey('foreignKeyA')).toBeTruthy();
+    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
     expect(
-      foreignKeyRegistry.isPrimaryForForeignKey(context.id, 'foreignKeyA')
+      foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
     ).toBeTruthy();
 
     context.removeFromRegistry('testSource');
-    expect(context.removedForeignKeys).toEqual(new Set(['foreignKeyA']));
+    expect(context.removedChildrenIds).toEqual(new Set(['foreignKeyA']));
 
     context.removed('foreignKeyA');
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
@@ -242,13 +242,13 @@ describe('PublicationContext', () => {
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.clear();
-    expect(context.hasForeignKey('foreignKeyA')).toBeTruthy();
+    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
     expect(
-      foreignKeyRegistry.isPrimaryForForeignKey(context.id, 'foreignKeyA')
+      foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
     ).toBeTruthy();
 
     context.removeFromRegistry('testSource');
-    expect(context.removedForeignKeys).toEqual(new Set(['foreignKeyA']));
+    expect(context.removedChildrenIds).toEqual(new Set(['foreignKeyA']));
 
     context.clear();
     context.removed('foreignKeyA');
@@ -267,9 +267,9 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
 
-    expect(context.hasForeignKey('nonExistingSource')).toBeFalsy();
+    expect(context.hasChildId('nonExistingSource')).toBeFalsy();
     expect(
-      foreignKeyRegistry.isPrimaryForForeignKey(context.id, 'nonExistingSource')
+      foreignKeyRegistry.isPrimaryForChildId(context.id, 'nonExistingSource')
     ).toBeFalsy();
 
     // test removal of unknown keys

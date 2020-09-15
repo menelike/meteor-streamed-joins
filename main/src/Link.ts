@@ -124,7 +124,7 @@ class Link<T extends MongoDoc = MongoDoc> {
     fields: Partial<WithoutId<T>>,
     doc: T
   ): void => {
-    const hasForeignKey = this.publicationContext.hasForeignKey(_id);
+    const hasForeignKey = this.publicationContext.hasChildId(_id);
     const match = this.matcher(doc);
 
     if (match && !hasForeignKey) {
@@ -144,7 +144,7 @@ class Link<T extends MongoDoc = MongoDoc> {
   };
 
   private replaced = (_id: string, doc: T): void => {
-    const hasForeignKey = this.publicationContext.hasForeignKey(_id);
+    const hasForeignKey = this.publicationContext.hasChildId(_id);
     const match = this.matcher(doc);
 
     if (match && !hasForeignKey) {
@@ -164,7 +164,7 @@ class Link<T extends MongoDoc = MongoDoc> {
   };
 
   private removed = (_id: string): void => {
-    if (!this.publicationContext.hasForeignKey(_id)) return;
+    if (!this.publicationContext.hasChildId(_id)) return;
     this.publicationContext.removeFromRegistry(_id);
     this.publicationContext.removed(_id);
     this.publicationContext.clear();

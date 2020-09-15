@@ -1,21 +1,21 @@
 class ForeignKeyRegistry {
-  private readonly sourceToDrain: Record<string, Set<string>>;
+  private readonly parentToChildren: Record<string, Set<string>>;
 
-  private readonly drainToSource: Record<string, Set<string>>;
+  private readonly childrenToParent: Record<string, Set<string>>;
 
   public readonly added: Set<string>;
 
   public readonly removed: Set<string>;
 
   constructor() {
-    this.sourceToDrain = {};
-    this.drainToSource = {};
+    this.parentToChildren = {};
+    this.childrenToParent = {};
     this.added = new Set();
     this.removed = new Set();
   }
 
-  private assembleKey = (id: string, sourceId: string): string => {
-    return `${id}:${sourceId}`;
+  private assembleKey = (id: string, parentId: string): string => {
+    return `${id}:${parentId}`;
   };
 
   private disAssembleKey = (key: string): [string, string] => {
@@ -25,88 +25,96 @@ class ForeignKeyRegistry {
     return [s[0], s[1]];
   };
 
-  public replace(id: string, sourceId: string, to: Array<string>): void {
-    const key = this.assembleKey(id, sourceId);
+  public replace(
+    id: string,
+    parentId: string,
+    childrenIds: Array<string>
+  ): void {
+    const key = this.assembleKey(id, parentId);
 
-    const added = to.filter(
-      (foreignKey) => !this.sourceToDrain[key]?.has(foreignKey)
+    const added = childrenIds.filter(
+      (childId) => !this.parentToChildren[key]?.has(childId)
     );
-    this.add(id, sourceId, added);
+    this.add(id, parentId, added);
 
-    const removed = [...(this.sourceToDrain[key]?.values() || [])].filter(
-      (foreignKey) => !to.includes(foreignKey)
+    const removed = [...(this.parentToChildren[key]?.values() || [])].filter(
+      (childId) => !childrenIds.includes(childId)
     );
     removed.forEach((foreignKey) => {
-      this.sourceToDrain[key].delete(foreignKey);
+      this.parentToChildren[key].delete(foreignKey);
     });
-    this._remove(id, sourceId, removed);
+    this._remove(id, parentId, removed);
   }
 
-  private _remove(id: string, sourceId: string, to: Array<string>): void {
-    if (!to.length) return;
-    const key = this.assembleKey(id, sourceId);
+  private _remove(
+    id: string,
+    parentId: string,
+    childrenIds: Array<string>
+  ): void {
+    if (!childrenIds.length) return;
+    const key = this.assembleKey(id, parentId);
 
-    to.forEach((foreignKey) => {
-      if (this.drainToSource[foreignKey].size === 1) {
-        if (this.added.has(foreignKey)) {
-          this.added.delete(foreignKey);
+    childrenIds.forEach((childId) => {
+      if (this.childrenToParent[childId].size === 1) {
+        if (this.added.has(childId)) {
+          this.added.delete(childId);
         } else {
-          this.removed.add(foreignKey);
+          this.removed.add(childId);
         }
-        delete this.drainToSource[foreignKey];
+        delete this.childrenToParent[childId];
       } else {
-        this.drainToSource[foreignKey].delete(key);
+        this.childrenToParent[childId].delete(key);
       }
     });
   }
 
-  public add(id: string, sourceId: string, to: Array<string>): void {
-    if (!to.length) return;
-    const key = this.assembleKey(id, sourceId);
+  public add(id: string, parentId: string, childrenIds: Array<string>): void {
+    if (!childrenIds.length) return;
+    const key = this.assembleKey(id, parentId);
 
-    if (key in this.sourceToDrain) {
-      to.forEach((foreignKey) => {
-        this.sourceToDrain[key].add(foreignKey);
+    if (key in this.parentToChildren) {
+      childrenIds.forEach((childId) => {
+        this.parentToChildren[key].add(childId);
       });
     } else {
-      this.sourceToDrain[key] = new Set(to);
+      this.parentToChildren[key] = new Set(childrenIds);
     }
 
-    to.forEach((foreignKey) => {
-      if (!(foreignKey in this.drainToSource)) {
-        if (this.removed.has(foreignKey)) {
-          this.removed.delete(foreignKey);
+    childrenIds.forEach((childId) => {
+      if (!(childId in this.childrenToParent)) {
+        if (this.removed.has(childId)) {
+          this.removed.delete(childId);
         } else {
-          this.added.add(foreignKey);
+          this.added.add(childId);
         }
       }
 
-      if (foreignKey in this.drainToSource) {
-        this.drainToSource[foreignKey].add(key);
+      if (childId in this.childrenToParent) {
+        this.childrenToParent[childId].add(key);
       } else {
-        this.drainToSource[foreignKey] = new Set([key]);
+        this.childrenToParent[childId] = new Set([key]);
       }
     });
   }
 
-  public remove(id: string, sourceId: string): void {
-    const key = this.assembleKey(id, sourceId);
-    this._remove(id, sourceId, [...this.sourceToDrain[key]]);
-    delete this.sourceToDrain[key];
+  public remove(id: string, parentId: string): void {
+    const key = this.assembleKey(id, parentId);
+    this._remove(id, parentId, [...this.parentToChildren[key]]);
+    delete this.parentToChildren[key];
   }
 
-  public isPrimaryForForeignKey(id: string, foreignKey: string): boolean {
-    if (!(foreignKey in this.drainToSource)) return false;
-    const firstKey = [...this.drainToSource[foreignKey]][0];
+  public isPrimaryForChildId(id: string, childId: string): boolean {
+    if (!(childId in this.childrenToParent)) return false;
+    const firstKey = [...this.childrenToParent[childId]][0];
     const [_id] = this.disAssembleKey(firstKey);
 
     return _id === id;
   }
 
-  public hasForeignKey(id: string, foreignKey: string): boolean {
+  public hasChildId(id: string, childId: string): boolean {
     return (
-      foreignKey in this.drainToSource &&
-      [...this.drainToSource[foreignKey]].some((key) => {
+      childId in this.childrenToParent &&
+      [...this.childrenToParent[childId]].some((key) => {
         const [_id] = this.disAssembleKey(key);
         return _id === id;
       })
