@@ -75,4 +75,51 @@ describe('ChangeStreamDeMultiplexer', () => {
     stop2();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
+
+  it('registers changeStream statically', () => {
+    expect.assertions(7);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    const otherCollection = mongoDB.db().collection('otherCollection');
+    const deMultiplexerStatic = new ChangeStreamDeMultiplexer();
+
+    deMultiplexerStatic.watch(collection);
+
+    expect(deMultiplexerStatic.hasListeners()).toBeTruthy();
+    let stop = deMultiplexerStatic.addListener(
+      collection,
+      createListenerMock()
+    );
+    stop();
+    expect(deMultiplexerStatic.hasListeners()).toBeTruthy();
+    expect(
+      deMultiplexerStatic.isWatching(collection.collectionName)
+    ).toBeTruthy();
+
+    const deMultiplexerDynamic = new ChangeStreamDeMultiplexer();
+
+    expect(deMultiplexerDynamic.hasListeners()).toBeFalsy();
+    stop = deMultiplexerDynamic.addListener(
+      otherCollection,
+      createListenerMock()
+    );
+    expect(deMultiplexerDynamic.hasListeners()).toBeTruthy();
+    stop();
+    expect(deMultiplexerDynamic.hasListeners()).toBeFalsy();
+    expect(
+      deMultiplexerDynamic.isWatching(otherCollection.collectionName)
+    ).toBeFalsy();
+  });
+
+  it('do not registers changeStream statically twice', () => {
+    expect.assertions(1);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    const deMultiplexer = new ChangeStreamDeMultiplexer();
+
+    const watch1 = deMultiplexer.watch(collection);
+    const watch2 = deMultiplexer.watch(collection);
+
+    expect(watch1).toBe(watch2);
+  });
 });

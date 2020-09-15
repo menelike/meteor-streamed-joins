@@ -47,6 +47,10 @@ export type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
   | FullDocumentChangeEventUpdate<T>
   | ChangeEventDelete<T>;
 
+type Options = {
+  keepRunning: boolean;
+};
+
 class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   private readonly listeners: Set<ChangeStreamCallBacks<T>>;
 
@@ -54,18 +58,25 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
 
   private changeStream: ChangeStream | undefined;
 
-  constructor(collection: Collection) {
+  private readonly keepRunning: boolean;
+
+  constructor(collection: Collection, options?: Options) {
     this.listeners = new Set();
     this.collection = collection;
+    this.keepRunning = !!options?.keepRunning;
+
+    this.startIfNeeded();
   }
 
   public isWatching(): boolean {
-    return !!this.changeStream;
+    return this.keepRunning || !!this.changeStream;
   }
 
   private startIfNeeded(): void {
+    if (this.changeStream) return;
+
     /* istanbul ignore else */
-    if (this.listeners.size && !this.changeStream) {
+    if (this.keepRunning || this.listeners.size) {
       this.changeStream = this.collection.watch(STATIC_AGGREGATION_PIPELINE, {
         fullDocument: 'updateLookup',
       });
@@ -75,6 +86,8 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   }
 
   private stopIfUseless(): void {
+    if (this.keepRunning) return;
+
     /* istanbul ignore else */
     if (!this.listeners.size && this.changeStream) {
       this.changeStream.close();
@@ -160,9 +173,12 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   };
 
   // used in tests
-  public _stop(): void {
+  public async _stop(): Promise<void> {
+    if (this.changeStream) {
+      await this.changeStream.close();
+      this.changeStream = undefined;
+    }
     this.listeners.clear();
-    this.stopIfUseless();
   }
 
   public addListener = (listener: ChangeStreamCallBacks<T>): void => {

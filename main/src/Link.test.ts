@@ -18,10 +18,6 @@ const COLLECTION_NAME_ROOT = 'ROOT';
 
 let root: Link | undefined;
 
-type RootDocument = {
-  _id: string;
-};
-
 beforeAll(async () => {
   await mongoDB.connect();
   await mongoDB.db().createCollection(COLLECTION_NAME_ROOT);
@@ -42,6 +38,39 @@ afterAll(async () => {
 }, 20000);
 
 describe('Link', () => {
+  it('stops if publication context is stopped', () => {
+    expect.assertions(2);
+
+    const db = mongoDB.db();
+    const collectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    let onStopFunc: (() => void) | undefined;
+    const publicationMock = {
+      ...MeteorPublicationMock,
+      onStop: jest.fn().mockImplementation((func: () => void): void => {
+        onStopFunc = func;
+      }),
+    };
+
+    root = new Link(publicationMock, collectionMock, {}, () => true);
+    const originalStop = root.stop;
+    root.stop = jest.fn();
+    root.observe();
+
+    expect(onStopFunc).toBeTruthy();
+    if (!onStopFunc) throw Error('no onStop() function registered');
+    onStopFunc();
+    expect(root.stop).toHaveBeenCalledTimes(1);
+    root.stop = originalStop;
+  });
+
   it('resolves root from root', () => {
     expect.assertions(1);
 

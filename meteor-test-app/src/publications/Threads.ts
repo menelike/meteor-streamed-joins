@@ -2,9 +2,12 @@ import { Meteor } from 'meteor/meteor';
 // @ts-ignore
 import { Minimongo } from 'meteor/minimongo';
 
-import Link from 'meteor-streamed-joins';
+import Link, { ChangeStreamRegistry } from 'meteor-streamed-joins';
 
 import Threads, { ThreadDocument } from '../collections/Threads';
+
+ChangeStreamRegistry.watch<ThreadDocument>(Threads.rawCollection());
+ChangeStreamRegistry.watch<Meteor.User>(Meteor.users.rawCollection());
 
 Meteor.publish('threads', function threadsPublication() {
   console.log('threads publication started');

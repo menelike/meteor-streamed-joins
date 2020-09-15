@@ -30,7 +30,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (multiplexer) {
-    multiplexer._stop();
+    await multiplexer._stop();
     multiplexer = undefined;
   }
   const db = mongoDB.db();
@@ -71,6 +71,47 @@ describe('ChangeStreamMultiplexer', () => {
 
     expect(multiplexer.isWatching()).toBeFalsy();
     expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts watching for changes without listeners', async () => {
+    expect.assertions(5);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    multiplexer = new ChangeStreamMultiplexer(collection, {
+      keepRunning: true,
+    });
+    expect(multiplexer.isWatching()).toBeTruthy();
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    multiplexer.addListener(listenerMock);
+
+    await collection.insertOne({
+      _id: new ObjectID().toHexString(),
+    });
+    await waitUntilHaveBeenCalledTimes(listenerMock.added, 1);
+    expect(listenerMock.added).toHaveBeenCalledTimes(1);
+
+    await multiplexer._stop();
+
+    multiplexer = new ChangeStreamMultiplexer(collection, {
+      keepRunning: false,
+    });
+    expect(multiplexer.isWatching()).toBeFalsy();
+    multiplexer.addListener(listenerMock);
+
+    await collection.insertOne({
+      _id: new ObjectID().toHexString(),
+    });
+    // since we did not wait/slept after adding the listener
+    // the inserted document has not called any listener
+    await waitUntilHaveBeenCalledTimes(listenerMock.added, 2);
+    expect(listenerMock.added).toHaveBeenCalledTimes(1);
+
+    await collection.insertOne({
+      _id: new ObjectID().toHexString(),
+    });
+    await waitUntilHaveBeenCalledTimes(listenerMock.added, 2);
+    expect(listenerMock.added).toHaveBeenCalledTimes(2);
   });
 
   it('fire on insert', async () => {
@@ -346,11 +387,14 @@ describe('ChangeStreamMultiplexer', () => {
     );
   });
 
-  it('ignore unknown operation', () => {
+  it('ignore unknown operation', async () => {
     expect.assertions(4);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer.addListener(listenerMock);
+
+    await sleep(DEFAULT_WAIT_IN_MS);
 
     // @ts-ignore
     multiplexer.onChange({
@@ -367,11 +411,14 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.removed).toHaveBeenCalledTimes(0);
   });
 
-  it('receives undefined fullDocument on replace', () => {
+  it('receives undefined fullDocument on replace', async () => {
     expect.assertions(5);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
     multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer.addListener(listenerMock);
+
+    await sleep(DEFAULT_WAIT_IN_MS);
 
     const _id = new ObjectID().toHexString();
 
