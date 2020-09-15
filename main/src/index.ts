@@ -1,11 +1,6 @@
-import ChangeStream from './ChangeStream';
-import MongoObserver from './MongoObserver';
+import ChangeStreamRegistry from './ChangeStreamRegistry';
+import Link from './Link';
 
-export type {
-  MeteorObserveCallbacks,
-  MeteorObserveChangesCallbacks,
-  WatchObserveCallBacks,
-} from './types';
-export type { ChangeEventMeteor } from './ChangeStreamMultiplexer';
+export { ChangeStreamRegistry };
 
-export { MongoObserver, ChangeStream };
+export default Link;

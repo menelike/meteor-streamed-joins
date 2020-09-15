@@ -1,4 +1,8 @@
-import type { ChangeEventMeteor } from './ChangeStreamMultiplexer';
+import type {
+  ChangeEventCR,
+  ChangeEventDelete,
+  ChangeEventUpdate,
+} from 'mongodb';
 
 export type DefaultDoc = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,25 +13,19 @@ export interface MongoDoc extends DefaultDoc {
   _id: string;
 }
 
-export type MeteorObserveCallbacks<T extends MongoDoc = MongoDoc> = {
-  added: (doc: T) => Array<string> | void;
-  changed: (newDoc: T, oldDoc: T) => Array<string> | void;
-  removed: (oldDoc: T) => void;
-};
+export type WithoutId<T extends MongoDoc = MongoDoc> = Pick<
+  T,
+  Exclude<keyof T, '_id'>
+>;
 
-export type MeteorObserveChangesCallbacks<T extends MongoDoc = MongoDoc> = {
-  added: (id: string, fields: Partial<T>) => Array<string> | void;
-  changed: (id: string, fields: Partial<T>) => Array<string> | void;
-  removed: (id: string) => void;
-};
-
-export interface WatchObserveCallBacks<T extends MongoDoc = MongoDoc> {
-  added(keys: string[]): void;
+export interface ChangeStreamCallBacks<T extends MongoDoc = MongoDoc> {
+  added(_id: string, doc: Partial<WithoutId<T>>, op: ChangeEventCR<T>): void;
   changed(
     _id: string,
-    fields: Partial<T>,
-    replace: boolean,
-    op: ChangeEventMeteor<T>
+    fields: Partial<WithoutId<T>>,
+    doc: WithoutId<T>,
+    op: ChangeEventUpdate<T>
   ): void;
-  removed(keys: string[]): void;
+  replaced(_id: string, doc: WithoutId<T>, op: ChangeEventCR<T>): void;
+  removed(_id: string, op: ChangeEventDelete<T>): void;
 }
