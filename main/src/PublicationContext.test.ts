@@ -66,7 +66,8 @@ describe('PublicationContext', () => {
     const doc = {};
     context.added('foreignKeyA', doc);
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledWith(
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
       CollectionName,
       'foreignKeyA',
       doc
@@ -128,7 +129,8 @@ describe('PublicationContext', () => {
     context.changed('foreignKeyA', fields);
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledWith(
+    expect(MeteorPublicationMock.changed).toHaveBeenNthCalledWith(
+      1,
       CollectionName,
       'foreignKeyA',
       fields
@@ -233,7 +235,8 @@ describe('PublicationContext', () => {
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledWith(
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
       CollectionName,
       'foreignKeyA'
     );

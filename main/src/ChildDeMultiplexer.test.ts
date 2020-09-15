@@ -32,7 +32,11 @@ describe('ChildDeMultiplexer', () => {
     const doc = {};
     deMultiplexer.parentAdded('parentId', doc);
     expect(linkChildMock.parentAdded).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.parentAdded).toHaveBeenCalledWith('parentId', doc);
+    expect(linkChildMock.parentAdded).toHaveBeenNthCalledWith(
+      1,
+      'parentId',
+      doc
+    );
   });
 
   it('calls changed', () => {
@@ -43,7 +47,11 @@ describe('ChildDeMultiplexer', () => {
     const doc = {};
     deMultiplexer.parentChanged('parentId', doc);
     expect(linkChildMock.parentChanged).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.parentChanged).toHaveBeenCalledWith('parentId', doc);
+    expect(linkChildMock.parentChanged).toHaveBeenNthCalledWith(
+      1,
+      'parentId',
+      doc
+    );
   });
 
   it('calls removed', () => {
@@ -53,7 +61,7 @@ describe('ChildDeMultiplexer', () => {
     deMultiplexer.link(linkChildMock);
     deMultiplexer.parentRemoved('parentId');
     expect(linkChildMock.parentRemoved).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.parentRemoved).toHaveBeenCalledWith('parentId');
+    expect(linkChildMock.parentRemoved).toHaveBeenNthCalledWith(1, 'parentId');
   });
 
   it('calls commit', () => {
@@ -63,7 +71,7 @@ describe('ChildDeMultiplexer', () => {
     deMultiplexer.link(linkChildMock);
     deMultiplexer.commit();
     expect(linkChildMock.commit).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.commit).toHaveBeenCalledWith();
+    expect(linkChildMock.commit).toHaveBeenNthCalledWith(1);
   });
 
   it('calls observe', () => {
@@ -73,7 +81,7 @@ describe('ChildDeMultiplexer', () => {
     deMultiplexer.link(linkChildMock);
     deMultiplexer.observe();
     expect(linkChildMock.observe).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.observe).toHaveBeenCalledWith();
+    expect(linkChildMock.observe).toHaveBeenNthCalledWith(1);
   });
 
   it('calls stop', () => {
@@ -83,6 +91,6 @@ describe('ChildDeMultiplexer', () => {
     deMultiplexer.link(linkChildMock);
     deMultiplexer.stop();
     expect(linkChildMock.stop).toHaveBeenCalledTimes(1);
-    expect(linkChildMock.stop).toHaveBeenCalledWith();
+    expect(linkChildMock.stop).toHaveBeenNthCalledWith(1);
   });
 });
