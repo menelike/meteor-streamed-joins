@@ -15,11 +15,11 @@ const mongoDB = new MongoMemoryReplSet();
 
 const DEFAULT_WAIT_IN_MS = 250;
 
-const COLLECTION_NAME_ROOT = 'ROOT';
+const COLLECTION_NAME_ROOT = 'LINK_CHILD_ROOT';
 
-const COLLECTION_NAME_CHILD = 'ROOT_CHILD';
+const COLLECTION_NAME_CHILD = 'LINK_CHILD_ROOT_CHILD';
 
-const COLLECTION_NAME_GRANDCHILD = 'ROOT_GRANDCHILD';
+const COLLECTION_NAME_GRANDCHILD = 'LINK_CHILD_ROOT_GRANDCHILD';
 
 let root: Link | undefined;
 let child: LinkChild | undefined;
@@ -706,7 +706,7 @@ describe('LinkChild', () => {
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.link(childCollectionMock, childResolver);
     // @ts-ignore
-    child.noop = jest.fn().mockImplementation(() => undefined);
+    child.added = jest.fn().mockImplementation(() => undefined);
 
     root.observe();
 
@@ -715,11 +715,11 @@ describe('LinkChild', () => {
     await childCollection.insertOne(childDocument);
 
     // @ts-ignore
-    await waitUntilHaveBeenCalledTimes(child.noop, 1);
+    await waitUntilHaveBeenCalledTimes(child.added, 1);
     // @ts-ignore
-    expect(child.noop).toHaveBeenCalledTimes(1);
+    expect(child.added).toHaveBeenCalledTimes(1);
     // @ts-ignore
-    expect(child.noop).toHaveBeenNthCalledWith(
+    expect(child.added).toHaveBeenNthCalledWith(
       1,
       childDocument._id,
       {},
@@ -759,7 +759,7 @@ describe('LinkChild', () => {
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.link(childCollectionMock, childResolver);
     // @ts-ignore
-    child.noop = jest.fn().mockImplementation(() => undefined);
+    child.removed = jest.fn().mockImplementation(() => undefined);
 
     root.observe();
 
@@ -768,11 +768,11 @@ describe('LinkChild', () => {
     await childCollection.deleteOne({ _id: childDocument._id });
 
     // @ts-ignore
-    await waitUntilHaveBeenCalledTimes(child.noop, 1);
+    await waitUntilHaveBeenCalledTimes(child.removed, 1);
     // @ts-ignore
-    expect(child.noop).toHaveBeenCalledTimes(1);
+    expect(child.removed).toHaveBeenCalledTimes(1);
     // @ts-ignore
-    expect(child.noop).toHaveBeenNthCalledWith(
+    expect(child.removed).toHaveBeenNthCalledWith(
       1,
       childDocument._id,
       expect.anything()
@@ -1292,5 +1292,67 @@ describe('LinkChild', () => {
     );
 
     childToGrandChild.stop();
+  });
+
+  it('adds related child even if the child was created afterwards', async () => {
+    expect.assertions(3);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const childDocument = { _id: new ObjectID().toHexString() };
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      child: childDocument._id,
+    };
+    await rootCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
+    child = root.link(childCollectionMock, childResolver);
+
+    // wait some time otherwise observer fires an insert
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await childCollection.insertOne(childDocument);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { child: childDocument._id }
+    );
+
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      {}
+    );
   });
 });

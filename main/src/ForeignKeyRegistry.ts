@@ -121,9 +121,12 @@ class ForeignKeyRegistry {
     );
   }
 
-  public clear(): void {
-    this.added.clear();
-    this.removed.clear();
+  public commitAdded(foreignKey: string): void {
+    this.added.delete(foreignKey);
+  }
+
+  public commitRemoved(foreignKey: string): void {
+    this.removed.delete(foreignKey);
   }
 }
 

@@ -20,7 +20,7 @@ describe('PublicationContext', () => {
 
     context.addToRegistry('key', ['a']);
     expect(context.addedChildrenIds).toEqual(new Set('a'));
-    context.clear();
+    context.addedChildrenIds.delete('a');
     context.removeFromRegistry('key');
     expect(context.removedChildrenIds).toEqual(new Set('a'));
   });
@@ -101,13 +101,13 @@ describe('PublicationContext', () => {
     );
 
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
 
     expect(context.hasChildId('foreignKeyA')).toBeTruthy();
     expect(
       foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
     ).toBeTruthy();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
@@ -122,11 +122,11 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
 
     const fields = { some: 'thing' };
     context.changed('foreignKeyA', fields);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledWith(
       CollectionName,
@@ -147,16 +147,16 @@ describe('PublicationContext', () => {
     );
     foreignKeyRegistry.add('primaryHandlerId', 'testSource', ['foreignKeyA']);
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
 
     context.changed('foreignKeyA', { some: 'thing' });
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('replaced foreignKey as primary handler', () => {
-    expect.assertions(5);
+    expect.assertions(6);
 
     const foreignKeyRegistry = new ForeignKeyRegistry();
     const context = new PublicationContext(
@@ -165,18 +165,26 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
 
     const doc = {};
     context.replaced('foreignKeyA', doc);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledWith(
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
       CollectionName,
       'foreignKeyA'
     );
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledWith(
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      CollectionName,
+      'foreignKeyA',
+      {}
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
       CollectionName,
       'foreignKeyA',
       doc
@@ -194,10 +202,10 @@ describe('PublicationContext', () => {
     );
     foreignKeyRegistry.add('primaryHandlerId', 'testSource', ['foreignKeyA']);
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
 
     context.replaced('foreignKeyA', {});
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
@@ -212,7 +220,7 @@ describe('PublicationContext', () => {
       foreignKeyRegistry
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
+    context.added('foreignKeyA', {});
     expect(context.hasChildId('foreignKeyA')).toBeTruthy();
     expect(
       foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
@@ -222,39 +230,13 @@ describe('PublicationContext', () => {
     expect(context.removedChildrenIds).toEqual(new Set(['foreignKeyA']));
 
     context.removed('foreignKeyA');
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledWith(
       CollectionName,
       'foreignKeyA'
     );
-  });
-
-  it('calls clear before removal', () => {
-    expect.assertions(6);
-
-    const foreignKeyRegistry = new ForeignKeyRegistry();
-    const context = new PublicationContext(
-      MeteorPublicationMock,
-      CollectionName,
-      foreignKeyRegistry
-    );
-    context.addToRegistry('testSource', ['foreignKeyA']);
-    context.clear();
-    expect(context.hasChildId('foreignKeyA')).toBeTruthy();
-    expect(
-      foreignKeyRegistry.isPrimaryForChildId(context.id, 'foreignKeyA')
-    ).toBeTruthy();
-
-    context.removeFromRegistry('testSource');
-    expect(context.removedChildrenIds).toEqual(new Set(['foreignKeyA']));
-
-    context.clear();
-    context.removed('foreignKeyA');
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('removed unknown foreignKey', () => {

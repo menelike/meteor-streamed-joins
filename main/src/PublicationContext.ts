@@ -37,6 +37,7 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
 
   public added = (foreignKey: string, doc: Partial<WithoutId<T>>): void => {
     if (!this.addedChildrenIds.has(foreignKey)) return;
+    this.commitAdded(foreignKey);
     this.context.added(this.collectionName, foreignKey, doc);
   };
 
@@ -60,6 +61,7 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
 
   public removed = (foreignKey: string): void => {
     if (!this.removedChildrenIds.has(foreignKey)) return;
+    this.commitRemoved(foreignKey);
     this.context.removed(this.collectionName, foreignKey);
   };
 
@@ -90,8 +92,12 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     return this.foreignKeyRegistry.removed;
   }
 
-  public clear(): void {
-    return this.foreignKeyRegistry.clear();
+  private commitAdded(foreignKey: string): void {
+    this.foreignKeyRegistry.commitAdded(foreignKey);
+  }
+
+  private commitRemoved(foreignKey: string): void {
+    this.foreignKeyRegistry.commitRemoved(foreignKey);
   }
 }
 

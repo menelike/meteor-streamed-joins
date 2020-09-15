@@ -123,7 +123,6 @@ export class LinkChild<
         removed.push(_id);
       });
     }
-    this.publicationContext.clear();
 
     added.forEach(({ _id, ...doc }) => {
       this.children.parentAdded(_id, doc);
@@ -159,6 +158,17 @@ export class LinkChild<
     this.publicationContext.removeFromRegistry(sourceId);
   };
 
+  // handle added events from change streams
+  // this is only used in cases where a linked document has been inserted
+  // after the related document e.g. the insertion order/foreign key
+  // relationship has been broken
+  /** @internal */
+  public added = (_id: string, doc: WithoutId<T>): void => {
+    if (!this.publicationContext.addedChildrenIds.has(_id)) return;
+    this.publicationContext.added(_id, this.filterFields(doc));
+    this.children.parentAdded(_id, doc);
+  };
+
   // handle change events from change streams
   /** @internal */
   public changed = (
@@ -182,17 +192,17 @@ export class LinkChild<
   };
 
   /* istanbul ignore next */
-  private noop = (): void => undefined;
+  private removed = (): void => undefined;
 
   /** @internal */
   public observe(): void {
     this.stopListener = ChangeStreamRegistry.addListener<T>(
       this.collection.rawCollection(),
       {
-        added: this.noop,
+        added: this.added,
         changed: this.changed,
         replaced: this.replaced,
-        removed: this.noop,
+        removed: this.removed,
       }
     );
     this.children.observe();

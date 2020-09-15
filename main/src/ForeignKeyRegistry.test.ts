@@ -25,7 +25,7 @@ describe('ForeignKeyRegistry', () => {
     registry.add('testId', 'testSourceId', ['a']);
     expect(registry.added).toEqual(new Set(['a']));
     expect(registry.removed).toEqual(new Set());
-    registry.clear();
+    registry.commitAdded('a');
     registry.add('testId', 'testSourceId', ['a']);
     expect(registry.added).toEqual(new Set());
     expect(registry.removed).toEqual(new Set());
@@ -76,7 +76,9 @@ describe('ForeignKeyRegistry', () => {
     expect(registry.hasChildId('testId', 'a')).toBeTruthy();
     expect(registry.hasChildId('testId', 'b')).toBeTruthy();
     expect(registry.hasChildId('testId', 'c')).toBeTruthy();
-    registry.clear();
+    registry.commitAdded('a');
+    registry.commitAdded('b');
+    registry.commitAdded('c');
     registry.replace('testId', 'sourceIdA', ['a', 'c', 'd']);
     expect(registry.hasChildId('testId', 'a')).toBeTruthy();
     expect(registry.hasChildId('testId', 'b')).toBeFalsy();
@@ -85,7 +87,8 @@ describe('ForeignKeyRegistry', () => {
 
     expect(registry.added).toEqual(new Set(['d']));
     expect(registry.removed).toEqual(new Set(['b']));
-    registry.clear();
+    registry.commitAdded('d');
+    registry.commitRemoved('b');
     registry.replace('testId', 'sourceIdA', ['a', 'c', 'd']);
     expect(registry.added).toEqual(new Set([]));
     expect(registry.removed).toEqual(new Set([]));
@@ -96,7 +99,7 @@ describe('ForeignKeyRegistry', () => {
 
     const registry = new ForeignKeyRegistry();
     registry.add('testId', 'sourceIdA', ['a']);
-    registry.clear();
+    registry.commitAdded('a');
     registry.remove('testId', 'sourceIdA');
     expect(registry.added).toEqual(new Set());
     expect(registry.removed).toEqual(new Set(['a']));

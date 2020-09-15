@@ -114,7 +114,6 @@ class Link<T extends MongoDoc = MongoDoc> {
     if (!this.matcher(doc)) return;
     this.publicationContext.addToRegistry(_id, [_id]);
     this.publicationContext.added(_id, this.filterFields(doc));
-    this.publicationContext.clear();
     this.children.parentAdded(_id, doc);
     if (!this.firstRun) this.children.commit();
   };
@@ -138,7 +137,6 @@ class Link<T extends MongoDoc = MongoDoc> {
     }
 
     this.publicationContext.changed(_id, this.filterFields(fields));
-    this.publicationContext.clear();
     this.children.parentChanged(_id, doc);
     this.children.commit();
   };
@@ -158,7 +156,6 @@ class Link<T extends MongoDoc = MongoDoc> {
     }
 
     this.publicationContext.replaced(_id, this.filterFields(doc));
-    this.publicationContext.clear();
     this.children.parentChanged(_id, doc);
     this.children.commit();
   };
@@ -167,7 +164,6 @@ class Link<T extends MongoDoc = MongoDoc> {
     if (!this.publicationContext.hasChildId(_id)) return;
     this.publicationContext.removeFromRegistry(_id);
     this.publicationContext.removed(_id);
-    this.publicationContext.clear();
     this.children.parentRemoved(_id);
     this.children.commit();
   };
