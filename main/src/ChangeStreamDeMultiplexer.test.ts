@@ -7,12 +7,18 @@ const mongoDB = new MongoMemoryReplSet();
 
 const COLLECTION_NAME = 'test';
 
+let deMultiplexer: ChangeStreamDeMultiplexer | undefined;
+
 beforeAll(async () => {
   await mongoDB.connect();
   await mongoDB.db().createCollection(COLLECTION_NAME);
 });
 
 afterEach(async () => {
+  if (deMultiplexer) {
+    await deMultiplexer._stop();
+    deMultiplexer = undefined;
+  }
   const db = mongoDB.db();
   await db.collection(COLLECTION_NAME).deleteMany({});
   jest.clearAllMocks();
@@ -34,7 +40,7 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect.assertions(3);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
-    const deMultiplexer = new ChangeStreamDeMultiplexer();
+    deMultiplexer = new ChangeStreamDeMultiplexer();
 
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     const stop = deMultiplexer.addListener(collection, createListenerMock());
@@ -47,7 +53,7 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect.assertions(4);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
-    const deMultiplexer = new ChangeStreamDeMultiplexer();
+    deMultiplexer = new ChangeStreamDeMultiplexer();
 
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     const listener = createListenerMock();
@@ -64,7 +70,7 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect.assertions(4);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
-    const deMultiplexer = new ChangeStreamDeMultiplexer();
+    deMultiplexer = new ChangeStreamDeMultiplexer();
 
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     const stop1 = deMultiplexer.addListener(collection, createListenerMock());
@@ -76,7 +82,7 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
 
-  it('registers changeStream statically', () => {
+  it('registers changeStream statically', async () => {
     expect.assertions(7);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
@@ -95,31 +101,47 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect(
       deMultiplexerStatic.isWatching(collection.collectionName)
     ).toBeTruthy();
+    await deMultiplexerStatic._stop();
 
-    const deMultiplexerDynamic = new ChangeStreamDeMultiplexer();
+    deMultiplexer = new ChangeStreamDeMultiplexer();
 
-    expect(deMultiplexerDynamic.hasListeners()).toBeFalsy();
-    stop = deMultiplexerDynamic.addListener(
-      otherCollection,
-      createListenerMock()
-    );
-    expect(deMultiplexerDynamic.hasListeners()).toBeTruthy();
+    expect(deMultiplexer.hasListeners()).toBeFalsy();
+    stop = deMultiplexer.addListener(otherCollection, createListenerMock());
+    expect(deMultiplexer.hasListeners()).toBeTruthy();
     stop();
-    expect(deMultiplexerDynamic.hasListeners()).toBeFalsy();
+    expect(deMultiplexer.hasListeners()).toBeFalsy();
     expect(
-      deMultiplexerDynamic.isWatching(otherCollection.collectionName)
+      deMultiplexer.isWatching(otherCollection.collectionName)
     ).toBeFalsy();
   });
 
-  it('do not registers changeStream statically twice', () => {
+  it('do not registers changeStream statically twice', async () => {
     expect.assertions(1);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
-    const deMultiplexer = new ChangeStreamDeMultiplexer();
+    deMultiplexer = new ChangeStreamDeMultiplexer();
 
     const watch1 = deMultiplexer.watch(collection);
     const watch2 = deMultiplexer.watch(collection);
 
     expect(watch1).toBe(watch2);
+
+    await deMultiplexer._stop();
+  });
+
+  it('removes all listeners on stop', async () => {
+    expect.assertions(2);
+
+    const collection = mongoDB.db().collection(COLLECTION_NAME);
+    deMultiplexer = new ChangeStreamDeMultiplexer();
+
+    deMultiplexer.watch(collection);
+    deMultiplexer.addListener(collection, createListenerMock());
+
+    expect(deMultiplexer.hasListeners()).toBeTruthy();
+
+    await deMultiplexer._stop();
+
+    expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
 });

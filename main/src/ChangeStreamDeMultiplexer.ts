@@ -67,6 +67,21 @@ class ChangeStreamDeMultiplexer {
       }
     }
   };
+
+  /** @internal used for tests */
+  public _stop = async (): Promise<void> => {
+    await Promise.all(
+      Object.entries(this.listeners).map(async ([key, listener]) => {
+        try {
+          await listener._stop();
+          delete this.listeners[key];
+        } catch (err) {
+          /* istanbul ignore next */
+          console.error(err);
+        }
+      })
+    );
+  };
 }
 
 export default ChangeStreamDeMultiplexer;
