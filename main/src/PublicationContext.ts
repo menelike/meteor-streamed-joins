@@ -46,14 +46,12 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     fields: Partial<WithoutId<T>>
   ): void => {
     if (Object.keys(fields).length === 0) return;
-    if (!this.foreignKeyRegistry.isPrimaryForChildId(this.id, foreignKey))
-      return;
+    if (!this.isPrimaryForChildId(foreignKey)) return;
     this.context.changed(this.collectionName, foreignKey, fields);
   };
 
   public replaced = (foreignKey: string, doc: Partial<WithoutId<T>>): void => {
-    if (!this.foreignKeyRegistry.isPrimaryForChildId(this.id, foreignKey))
-      return;
+    if (!this.isPrimaryForChildId(foreignKey)) return;
     // Todo request/implement replace in meteor publication
     this.context.removed(this.collectionName, foreignKey);
     this.context.added(this.collectionName, foreignKey, doc);
@@ -67,6 +65,10 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
 
   public hasChildId(foreignKey: string): boolean {
     return this.foreignKeyRegistry.hasChildId(this.id, foreignKey);
+  }
+
+  public isPrimaryForChildId(foreignKey: string): boolean {
+    return this.foreignKeyRegistry.isPrimaryForChildId(this.id, foreignKey);
   }
 
   public addToRegistry(sourceId: string, foreignKeys: Array<string>): void {

@@ -1355,4 +1355,82 @@ describe('LinkChild', () => {
       {}
     );
   });
+
+  it('afterwards created children are only added on the primary publiction context', async () => {
+    expect.assertions(6);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const childDocument = { _id: new ObjectID().toHexString() };
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      child: childDocument._id,
+    };
+    await rootCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
+    child = root.link(childCollectionMock, childResolver);
+    grandChild = root.link(childCollectionMock, childResolver);
+
+    // wait some time otherwise observer fires an insert
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    root.observe();
+
+    // @ts-ignore otherwise we can not enforce the added call to
+    // grandChild.added() to pass since the id is removed with child.added()
+    child.publicationContext.commitAdded = jest.fn();
+    expect(
+      child.publicationContext.isPrimaryForChildId(childDocument._id)
+    ).toBeTruthy();
+    expect(
+      grandChild.publicationContext.isPrimaryForChildId(childDocument._id)
+    ).toBeFalsy();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await childCollection.insertOne(childDocument);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    // make sure that child.publicationContext.commitAdded() has been
+    // overriden correctly
+    expect(child.publicationContext.addedChildrenIds).toEqual(
+      new Set([childDocument._id])
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { child: childDocument._id }
+    );
+
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      {}
+    );
+  });
 });

@@ -163,15 +163,17 @@ export class LinkChild<
   // after the related document e.g. the insertion order/foreign key
   // relationship has been broken
   /** @internal */
-  public added = (_id: string, doc: WithoutId<T>): void => {
+  private added = (_id: string, doc: WithoutId<T>): void => {
     if (!this.publicationContext.addedChildrenIds.has(_id)) return;
-    this.publicationContext.added(_id, this.filterFields(doc));
+    // only add the dangling document when this instance is the primary
+    if (this.publicationContext.isPrimaryForChildId(_id)) {
+      this.publicationContext.added(_id, this.filterFields(doc));
+    }
     this.children.parentAdded(_id, doc);
   };
 
   // handle change events from change streams
-  /** @internal */
-  public changed = (
+  private changed = (
     _id: string,
     fields: Partial<WithoutId<T>>,
     doc: WithoutId<T>
@@ -183,8 +185,7 @@ export class LinkChild<
   };
 
   // handle replace events from change streams
-  /** @internal */
-  public replaced = (_id: string, doc: WithoutId<T>): void => {
+  private replaced = (_id: string, doc: WithoutId<T>): void => {
     if (!this.publicationContext.hasChildId(_id)) return;
     this.publicationContext.replaced(_id, this.filterFields(doc));
     this.children.parentChanged(_id, doc);
