@@ -32,7 +32,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     expect(context.addedChildrenIds).toBe(foreignKeyRegistry.added);
@@ -46,7 +46,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     // nothing should be called as foreignKey has not been registered before
@@ -83,7 +83,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     expect(context.hasChildId('foreignKeyA')).toBeFalsy();
@@ -98,7 +98,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     context.addToRegistry('testSource', ['foreignKeyA']);
@@ -120,7 +120,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.added('foreignKeyA', {});
@@ -145,7 +145,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
     foreignKeyRegistry.add('primaryHandlerId', 'testSource', ['foreignKeyA']);
     context.addToRegistry('testSource', ['foreignKeyA']);
@@ -164,7 +164,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.added('foreignKeyA', {});
@@ -200,7 +200,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
     foreignKeyRegistry.add('primaryHandlerId', 'testSource', ['foreignKeyA']);
     context.addToRegistry('testSource', ['foreignKeyA']);
@@ -219,7 +219,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
     context.addToRegistry('testSource', ['foreignKeyA']);
     context.added('foreignKeyA', {});
@@ -249,7 +249,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     expect(context.hasChildId('nonExistingSource')).toBeFalsy();
@@ -271,7 +271,7 @@ describe('PublicationContext', () => {
     const context = new PublicationContext(
       MeteorPublicationMock,
       CollectionName,
-      foreignKeyRegistry
+      { foreignKeyRegistry }
     );
 
     context.addToRegistry('sourceId', ['fk']);
@@ -279,5 +279,27 @@ describe('PublicationContext', () => {
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     context.changed('fk', { not: 'empty' });
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips publication', () => {
+    expect.assertions(3);
+
+    const foreignKeyRegistry = new ForeignKeyRegistry();
+    const context = new PublicationContext(
+      MeteorPublicationMock,
+      CollectionName,
+      { foreignKeyRegistry, skipPublication: true }
+    );
+
+    context.addToRegistry('sourceId', ['foreignKeyA']);
+    context.added('foreignKeyA', {});
+    context.changed('foreignKeyA', { some: 'thing' });
+    context.replaced('foreignKeyA', {});
+    context.removeFromRegistry('sourceId');
+    context.removed('foreignKeyA');
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 });

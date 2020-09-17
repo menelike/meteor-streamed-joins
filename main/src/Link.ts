@@ -16,6 +16,7 @@ export type Matcher<T extends MongoDoc = MongoDoc> = (
 type Options<T extends MongoDoc = MongoDoc> = {
   matcher?: Matcher<T>;
   fields?: FieldProjection;
+  skipPublication?: boolean;
 };
 
 class Link<T extends MongoDoc = MongoDoc> {

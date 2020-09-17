@@ -11,6 +11,7 @@ import filterFields, { FieldProjection } from './utils/filterFields';
 
 export type LinkChildOptions = {
   fields?: FieldProjection;
+  skipPublication?: boolean;
 };
 
 export type ExtractPrimaryKeys<T extends MongoDoc = MongoDoc> = (
@@ -61,7 +62,11 @@ export class LinkChild<
     this.publicationContext = new PublicationContext(
       context,
       collection.rawCollection().collectionName,
-      existingForeignKeyRegistry?.publicationContext.foreignKeyRegistry
+      {
+        foreignKeyRegistry:
+          existingForeignKeyRegistry?.publicationContext.foreignKeyRegistry,
+        skipPublication: options?.skipPublication,
+      }
     );
     this.root().setNode(this);
   }
