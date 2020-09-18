@@ -41,10 +41,8 @@ class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
     });
   };
 
-  public stop = (): void => {
-    this.children.forEach((child) => {
-      child.stop();
-    });
+  public stop = async (): Promise<void> => {
+    await Promise.all([...this.children].map((child) => child.stop()));
   };
 }
 

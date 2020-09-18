@@ -185,21 +185,17 @@ class Link<T extends MongoDoc = MongoDoc> {
       }
     );
     this.children.observe();
-    this.context.onStop(() => this.stop());
+    this.context.onStop(this.stop);
   }
 
-  /** @internal */
-  public stop(): boolean {
-    if (this.stopListener) {
-      this.stopListener();
-      this.stopListener = undefined;
-      return true;
-    }
+  public stop = async (): Promise<void> => {
+    const { stopListener } = this;
+    this.stopListener = undefined;
 
-    this.children.stop();
+    if (stopListener) await stopListener();
 
-    return false;
-  }
+    await this.children.stop();
+  };
 }
 
 export default Link;

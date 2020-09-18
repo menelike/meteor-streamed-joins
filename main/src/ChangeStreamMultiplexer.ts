@@ -85,12 +85,12 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
-  private stopIfUseless(): void {
+  private async stopIfUseless(): Promise<void> {
     if (this.keepRunning) return;
 
     /* istanbul ignore else */
     if (!this.listeners.size && this.changeStream) {
-      this.changeStream.close();
+      await this.changeStream.close();
       this.changeStream = undefined;
     }
   }
@@ -186,9 +186,11 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     this.startIfNeeded();
   };
 
-  public removeListener = (listener: ChangeStreamCallBacks<T>): void => {
+  public removeListener = async (
+    listener: ChangeStreamCallBacks<T>
+  ): Promise<void> => {
     this.listeners.delete(listener);
-    this.stopIfUseless();
+    await this.stopIfUseless();
   };
 }
 

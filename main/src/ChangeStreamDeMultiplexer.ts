@@ -3,7 +3,7 @@ import type { Collection } from 'mongodb';
 import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
 import type { ChangeStreamCallBacks, MongoDoc } from './types';
 
-type StopFunc = () => void;
+type StopFunc = () => Promise<void>;
 
 class ChangeStreamDeMultiplexer {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,13 +55,13 @@ class ChangeStreamDeMultiplexer {
   private stopFactory = <T extends MongoDoc = MongoDoc>(
     collection: Collection<T>,
     changeStreamCallBacks: ChangeStreamCallBacks<T>
-  ): StopFunc => (): void => {
+  ): StopFunc => async (): Promise<void> => {
     const namespace = collection.collectionName;
 
     const listener = this.listeners[namespace];
 
     if (listener) {
-      listener.removeListener(changeStreamCallBacks);
+      await listener.removeListener(changeStreamCallBacks);
       if (!listener.isWatching()) {
         delete this.listeners[namespace];
       }

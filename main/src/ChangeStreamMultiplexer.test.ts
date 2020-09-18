@@ -44,7 +44,7 @@ afterAll(async () => {
 }, 20000);
 
 describe('ChangeStreamMultiplexer', () => {
-  it('starts and stops when needed/not needed', () => {
+  it('starts and stops when needed/not needed', async () => {
     expect.assertions(6);
 
     const onMock = jest.fn();
@@ -67,7 +67,7 @@ describe('ChangeStreamMultiplexer', () => {
     expect(watchMock).toHaveBeenCalledTimes(1);
     expect(onMock).toHaveBeenNthCalledWith(1, 'change', expect.any(Function));
 
-    multiplexer.removeListener(listenerMock);
+    await multiplexer.removeListener(listenerMock);
 
     expect(multiplexer.isWatching()).toBeFalsy();
     expect(closeMock).toHaveBeenCalledTimes(1);

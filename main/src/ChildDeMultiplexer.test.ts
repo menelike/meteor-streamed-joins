@@ -84,12 +84,12 @@ describe('ChildDeMultiplexer', () => {
     expect(linkChildMock.observe).toHaveBeenNthCalledWith(1);
   });
 
-  it('calls stop', () => {
+  it('calls stop', async () => {
     expect.assertions(2);
 
     const deMultiplexer = new ChildDeMultiplexer();
     deMultiplexer.link(linkChildMock);
-    deMultiplexer.stop();
+    await deMultiplexer.stop();
     expect(linkChildMock.stop).toHaveBeenCalledTimes(1);
     expect(linkChildMock.stop).toHaveBeenNthCalledWith(1);
   });

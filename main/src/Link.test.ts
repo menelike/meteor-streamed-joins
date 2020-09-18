@@ -14,7 +14,7 @@ const mongoDB = new MongoMemoryReplSet();
 
 const DEFAULT_WAIT_IN_MS = 250;
 
-const COLLECTION_NAME_ROOT = 'ROOT';
+const COLLECTION_NAME_ROOT = 'LINK_ROOT';
 
 let root: Link | undefined;
 
@@ -27,7 +27,7 @@ afterEach(async () => {
   const db = mongoDB.db();
   await db.collection(COLLECTION_NAME_ROOT).deleteMany({});
   if (root) {
-    root.stop();
+    await root.stop();
     root = undefined;
   }
   jest.clearAllMocks();
@@ -38,7 +38,7 @@ afterAll(async () => {
 }, 20000);
 
 describe('Link', () => {
-  it('stops if publication context is stopped', () => {
+  it('stops if publication context is stopped', async () => {
     expect.assertions(2);
 
     const db = mongoDB.db();
@@ -51,24 +51,29 @@ describe('Link', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
 
-    let onStopFunc: (() => void) | undefined;
+    let onStopFunc: (() => Promise<void>) | undefined;
     const publicationMock = {
       ...MeteorPublicationMock,
-      onStop: jest.fn().mockImplementation((func: () => void): void => {
-        onStopFunc = func;
-      }),
+      onStop: jest
+        .fn()
+        .mockImplementation((func: () => Promise<void>): void => {
+          onStopFunc = func;
+        }),
     };
 
     root = new Link(publicationMock, collectionMock, {}, () => true);
-    const originalStop = root.stop;
-    root.stop = jest.fn();
     root.observe();
+
+    const child = root.link(collectionMock, () => undefined);
+    const originalStop = child.stop;
+    child.stop = jest.fn();
 
     expect(onStopFunc).toBeTruthy();
     if (!onStopFunc) throw Error('no onStop() function registered');
-    onStopFunc();
-    expect(root.stop).toHaveBeenCalledTimes(1);
-    root.stop = originalStop;
+    await onStopFunc();
+
+    expect(child.stop).toHaveBeenCalledTimes(1);
+    await originalStop();
   });
 
   it('resolves root from root', () => {

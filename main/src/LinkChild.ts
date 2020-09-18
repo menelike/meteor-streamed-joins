@@ -167,7 +167,6 @@ export class LinkChild<
   // this is only used in cases where a linked document has been inserted
   // after the related document e.g. the insertion order/foreign key
   // relationship has been broken
-  /** @internal */
   private added = (_id: string, doc: WithoutId<T>): void => {
     if (!this.publicationContext.addedChildrenIds.has(_id)) return;
     // only add the dangling document when this instance is the primary
@@ -215,15 +214,12 @@ export class LinkChild<
   }
 
   /** @internal */
-  public stop(): boolean {
-    if (this.stopListener) {
-      this.stopListener();
-      this.stopListener = undefined;
-      return true;
-    }
+  public stop = async (): Promise<void> => {
+    const { stopListener } = this;
+    this.stopListener = undefined;
 
-    this.children.stop();
+    if (stopListener) await stopListener();
 
-    return false;
-  }
+    await this.children.stop();
+  };
 }

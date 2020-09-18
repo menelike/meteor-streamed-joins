@@ -33,22 +33,24 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  if (root) {
+    await root.stop();
+    root = undefined;
+  }
+  if (child) {
+    await child.stop();
+    child = undefined;
+  }
+  if (grandChild) {
+    await grandChild.stop();
+    grandChild = undefined;
+  }
+
   const db = mongoDB.db();
   await db.collection(COLLECTION_NAME_ROOT).deleteMany({});
   await db.collection(COLLECTION_NAME_CHILD).deleteMany({});
   await db.collection(COLLECTION_NAME_GRANDCHILD).deleteMany({});
-  if (root) {
-    root.stop();
-    root = undefined;
-  }
-  if (child) {
-    child.stop();
-    child = undefined;
-  }
-  if (grandChild) {
-    grandChild.stop();
-    grandChild = undefined;
-  }
+
   jest.clearAllMocks();
 });
 
@@ -1138,7 +1140,7 @@ describe('LinkChild', () => {
       { prop: 'B' }
     );
 
-    children.stop();
+    await children.stop();
   });
 
   it('two parents with the same child', async () => {
@@ -1291,7 +1293,7 @@ describe('LinkChild', () => {
       { prop: 'grandChild' }
     );
 
-    childToGrandChild.stop();
+    await childToGrandChild.stop();
   });
 
   it('adds related child even if the child was created afterwards', async () => {

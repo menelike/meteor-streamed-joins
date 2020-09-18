@@ -36,7 +36,7 @@ const createListenerMock = (): ChangeStreamCallBacks => ({
 });
 
 describe('ChangeStreamDeMultiplexer', () => {
-  it('registers a new collection', () => {
+  it('registers a new collection', async () => {
     expect.assertions(3);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
@@ -45,11 +45,11 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     const stop = deMultiplexer.addListener(collection, createListenerMock());
     expect(deMultiplexer.hasListeners()).toBeTruthy();
-    stop();
+    await stop();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
 
-  it('do not register the same listener twice', () => {
+  it('do not register the same listener twice', async () => {
     expect.assertions(4);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
@@ -60,13 +60,13 @@ describe('ChangeStreamDeMultiplexer', () => {
     const stop1 = deMultiplexer.addListener(collection, listener);
     const stop2 = deMultiplexer.addListener(collection, listener);
     expect(deMultiplexer.hasListeners()).toBeTruthy();
-    stop1();
+    await stop1();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
-    stop2();
+    await stop2();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
 
-  it('do not register the same collection twice', () => {
+  it('do not register the same collection twice', async () => {
     expect.assertions(4);
 
     const collection = mongoDB.db().collection(COLLECTION_NAME);
@@ -76,9 +76,9 @@ describe('ChangeStreamDeMultiplexer', () => {
     const stop1 = deMultiplexer.addListener(collection, createListenerMock());
     const stop2 = deMultiplexer.addListener(collection, createListenerMock());
     expect(deMultiplexer.hasListeners()).toBeTruthy();
-    stop1();
+    await stop1();
     expect(deMultiplexer.hasListeners()).toBeTruthy();
-    stop2();
+    await stop2();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
   });
 
@@ -96,7 +96,7 @@ describe('ChangeStreamDeMultiplexer', () => {
       collection,
       createListenerMock()
     );
-    stop();
+    await stop();
     expect(deMultiplexerStatic.hasListeners()).toBeTruthy();
     expect(
       deMultiplexerStatic.isWatching(collection.collectionName)
@@ -108,7 +108,7 @@ describe('ChangeStreamDeMultiplexer', () => {
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     stop = deMultiplexer.addListener(otherCollection, createListenerMock());
     expect(deMultiplexer.hasListeners()).toBeTruthy();
-    stop();
+    await stop();
     expect(deMultiplexer.hasListeners()).toBeFalsy();
     expect(
       deMultiplexer.isWatching(otherCollection.collectionName)
