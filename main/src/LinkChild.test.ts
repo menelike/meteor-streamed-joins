@@ -1435,4 +1435,62 @@ describe('LinkChild', () => {
       {}
     );
   });
+
+  it('removes children even if parent is still related', async () => {
+    expect.assertions(2);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const childDocument = { _id: new ObjectID().toHexString() };
+    const unrelatedChildDocument = { _id: new ObjectID().toHexString() };
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      child: childDocument._id,
+    };
+    await rootCollection.insertOne(rootDocument);
+    await childCollection.insertOne(childDocument);
+    await childCollection.insertOne(unrelatedChildDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
+    child = root.link(childCollectionMock, childResolver);
+
+    // wait some time otherwise observer fires an insert
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await childCollection.deleteOne({ _id: unrelatedChildDocument._id });
+    await childCollection.deleteOne({ _id: childDocument._id });
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_CHILD,
+      childDocument._id
+    );
+  });
 });

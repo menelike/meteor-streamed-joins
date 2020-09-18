@@ -107,6 +107,10 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     return this.foreignKeyRegistry.removed;
   }
 
+  public removeChildFromRegistry(foreignKey: string): void {
+    return this.foreignKeyRegistry.removeChild(this.id, foreignKey);
+  }
+
   private commitAdded(foreignKey: string): void {
     this.foreignKeyRegistry.commitAdded(foreignKey);
   }

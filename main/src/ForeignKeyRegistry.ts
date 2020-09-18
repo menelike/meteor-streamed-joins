@@ -37,9 +37,10 @@ class ForeignKeyRegistry {
     );
     this.add(id, parentId, added);
 
-    const removed = [...(this.parentToChildren[key]?.values() || [])].filter(
-      (childId) => !childrenIds.includes(childId)
-    );
+    const removed = [
+      ...(this.parentToChildren[key]?.values() ||
+        /* istanbul ignore next */ []),
+    ].filter((childId) => !childrenIds.includes(childId));
     removed.forEach((foreignKey) => {
       this.parentToChildren[key].delete(foreignKey);
     });
@@ -103,6 +104,22 @@ class ForeignKeyRegistry {
     delete this.parentToChildren[key];
   }
 
+  // removes the child from all parents for a specific publicationContext
+  // happens when the child is removed while parents are still linked
+  public removeChild(id: string, childId: string): void {
+    if (!(childId in this.childrenToParent)) return;
+    this.childrenToParent[childId].forEach((key) => {
+      const [_id, parentId] = this.disAssembleKey(key);
+      if (_id !== id) return;
+      this._remove(id, parentId, [childId]);
+      if (this.parentToChildren[key].size === 1) {
+        delete this.parentToChildren[key];
+      } else {
+        this.parentToChildren[key].delete(childId);
+      }
+    });
+  }
+
   public isPrimaryForChildId(id: string, childId: string): boolean {
     if (!(childId in this.childrenToParent)) return false;
     const firstKey = [...this.childrenToParent[childId]][0];
@@ -119,6 +136,11 @@ class ForeignKeyRegistry {
         return _id === id;
       })
     );
+  }
+
+  public hasParentId(id: string, parentId: string): boolean {
+    const key = this.assembleKey(id, parentId);
+    return key in this.parentToChildren;
   }
 
   public commitAdded(foreignKey: string): void {

@@ -156,4 +156,39 @@ describe('ForeignKeyRegistry', () => {
     expect(registry.isPrimaryForChildId('testIdA', 'a')).toBeFalsy();
     expect(registry.isPrimaryForChildId('testIdB', 'a')).toBeTruthy();
   });
+
+  it('removes single child from parent', () => {
+    expect.assertions(15);
+
+    const registry = new ForeignKeyRegistry();
+    registry.add('testIdA', 'sourceIdA', ['a', 'b']);
+    registry.commitAdded('a');
+    registry.commitAdded('b');
+
+    expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.removeChild('unknown', 'a');
+    expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.removeChild('testIdA', 'unknown');
+    expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.removeChild('testIdA', 'a');
+    registry.commitRemoved('a');
+    expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.removeChild('testIdA', 'b');
+    registry.commitRemoved('b');
+    expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeFalsy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeFalsy();
+  });
 });

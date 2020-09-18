@@ -154,7 +154,10 @@ export class LinkChild<
   /** @internal */
   public parentChanged = (sourceId: string, doc: WithoutId<P>): void => {
     const keys = this.resolver(doc);
-    this.publicationContext.replaceFromRegistry(sourceId, keys || []);
+    this.publicationContext.replaceFromRegistry(
+      sourceId,
+      keys || /* istanbul ignore next */ []
+    );
   };
 
   // handle remove from parent
@@ -196,8 +199,14 @@ export class LinkChild<
     this.commit();
   };
 
-  /* istanbul ignore next */
-  private removed = (): void => undefined;
+  // removes a child even if still related to the parent
+  // which happens when the child is removed before all
+  // related parents have been removed, counterpart wise to this.added()
+  private removed = (_id: string): void => {
+    if (!this.publicationContext.hasChildId(_id)) return;
+    this.publicationContext.removeChildFromRegistry(_id);
+    this.commit();
+  };
 
   /** @internal */
   public observe(): void {
