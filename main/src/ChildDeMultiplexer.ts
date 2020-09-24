@@ -1,17 +1,23 @@
 import type { LinkChild } from './LinkChild';
+import type { LinkChildSelector } from './LinkChildSelector';
 import { MongoDoc, WithoutId } from './types';
 
 class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly children: Set<LinkChild<P, any>> = new Set();
+  private readonly children: Set<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    LinkChild<P, any> | LinkChildSelector<P, any>
+  > = new Set();
 
   public link = <T extends MongoDoc = MongoDoc>(
-    linkChild: LinkChild<P, T>
+    linkChild: LinkChild<P, T> | LinkChildSelector<P, T>
   ): void => {
     this.children.add(linkChild);
   };
 
-  public parentAdded = (parentId: string, parentDoc: WithoutId<P>): void => {
+  public parentAdded = (
+    parentId: string,
+    parentDoc: Partial<WithoutId<P>>
+  ): void => {
     this.children.forEach((child) => {
       child.parentAdded(parentId, parentDoc);
     });
@@ -32,6 +38,9 @@ class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
   public commit = (): void => {
     this.children.forEach((child) => {
       child.commit();
+    });
+    this.children.forEach((child) => {
+      child.flush();
     });
   };
 

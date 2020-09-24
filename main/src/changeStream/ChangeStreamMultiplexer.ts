@@ -8,8 +8,8 @@ import type {
   Collection,
 } from 'mongodb';
 
-import type { ChangeStreamCallBacks, MongoDoc, WithoutId } from './types';
-import convertDottedToObject from './utils/convertDottedToObject';
+import type { ChangeStreamCallBacks, MongoDoc, WithoutId } from '../types';
+import convertDottedToObject from '../utils/convertDottedToObject';
 
 const bindEnvironment =
   // eslint-disable-next-line @typescript-eslint/ban-types

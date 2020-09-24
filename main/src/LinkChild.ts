@@ -1,111 +1,189 @@
-import { Mongo } from 'meteor/mongo';
+import type { Mongo } from 'meteor/mongo';
 
-import ChangeStreamRegistry from './ChangeStreamRegistry';
-import ChildDeMultiplexer from './ChildDeMultiplexer';
-import Link from './Link';
-import PublicationContext, {
-  MeteorPublicationContext,
-} from './PublicationContext';
+import { ChildBase, ChildBaseOptions } from './base/ChildBase';
+import { RootBase } from './base/RootBase';
+import { LinkChildSelector } from './LinkChildSelector';
+import type {
+  ExtractSelector,
+  LinkChildSelectorOptions,
+} from './LinkChildSelector';
+import type { MeteorPublicationContext } from './PublicationContext';
 import type { MongoDoc, WithoutId } from './types';
-import filterFields, { FieldProjection } from './utils/filterFields';
 
 export type LinkChildOptions = {
-  fields?: FieldProjection;
-  skipPublication?: boolean;
+  fields?: ChildBaseOptions['fields'];
+  skipPublication?: ChildBaseOptions['skipPublication'];
 };
 
-export type ExtractPrimaryKeys<T extends MongoDoc = MongoDoc> = (
-  document: Partial<WithoutId<T>>
+export type ExtractPrimaryKeys<P extends MongoDoc = MongoDoc> = (
+  document: Partial<WithoutId<P>>
 ) => string[] | undefined;
+
+type ParentAdded<T extends MongoDoc = MongoDoc> = {
+  type: 'parentAdded';
+  payload: {
+    sourceId: string;
+    doc: Partial<WithoutId<T>>;
+  };
+};
+
+type ParentChanged<T extends MongoDoc = MongoDoc> = {
+  type: 'parentChanged';
+  payload: {
+    sourceId: string;
+    doc: WithoutId<T>;
+  };
+};
+
+type ParentRemoved = {
+  type: 'parentRemoved';
+  payload: {
+    sourceId: string;
+  };
+};
+
+type Added<T extends MongoDoc = MongoDoc> = {
+  type: 'added';
+  payload: {
+    id: string;
+    doc: WithoutId<T>;
+  };
+};
+
+type Changed<T extends MongoDoc = MongoDoc> = {
+  type: 'changed';
+  payload: {
+    id: string;
+    fields: Partial<WithoutId<T>>;
+    doc: WithoutId<T>;
+  };
+};
+
+type Replaced<T extends MongoDoc = MongoDoc> = {
+  type: 'replaced';
+  payload: {
+    id: string;
+    doc: WithoutId<T>;
+  };
+};
+
+type Removed = {
+  type: 'removed';
+  payload: {
+    id: string;
+  };
+};
+
+type Queue<
+  P extends MongoDoc = MongoDoc,
+  T extends MongoDoc = MongoDoc
+> = Array<
+  | ParentAdded<P>
+  | ParentChanged<P>
+  | ParentRemoved
+  | Added<T>
+  | Changed<T>
+  | Replaced<T>
+  | Removed
+>;
 
 export class LinkChild<
   P extends MongoDoc = MongoDoc,
   T extends MongoDoc = MongoDoc
-> {
-  private readonly children: ChildDeMultiplexer<T>;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly parent: Link<P> | LinkChild<any, P>;
-
-  private readonly fields: FieldProjection | undefined;
-
-  private readonly collection: Mongo.Collection<T>;
-
+> extends ChildBase<P, T> {
   private readonly resolver: ExtractPrimaryKeys<P>;
 
-  private stopListener:
-    | ReturnType<typeof ChangeStreamRegistry.addListener>
-    | undefined;
-
-  /** @internal */
-  public readonly publicationContext: PublicationContext<T>;
-
-  private readonly context: MeteorPublicationContext<T>;
+  private queue: Queue<P, T>;
 
   constructor(
     context: MeteorPublicationContext<T>,
     collection: Mongo.Collection<T>,
     resolver: ExtractPrimaryKeys<P>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    parent: Link<P> | LinkChild<any, P>,
+    parent: RootBase<P> | ChildBase<any, any>,
     options?: LinkChildOptions | undefined
   ) {
-    this.context = context;
-    this.collection = collection;
+    super(context, collection, parent, {
+      fields: options?.fields,
+      skipPublication: !!options?.skipPublication,
+    });
     this.resolver = resolver;
-    this.parent = parent;
-    this.fields = options?.fields;
-    this.children = new ChildDeMultiplexer<T>();
-
-    const { collectionName } = collection.rawCollection();
-    const existingForeignKeyRegistry = this.root().getNode(collectionName);
-    this.publicationContext = new PublicationContext(
-      context,
-      collection.rawCollection().collectionName,
-      {
-        foreignKeyRegistry:
-          existingForeignKeyRegistry?.publicationContext.foreignKeyRegistry,
-        skipPublication: options?.skipPublication,
-      }
-    );
-    this.root().setNode(this);
+    this.queue = [];
   }
 
   /** @internal */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public root = (): Link<any> => {
-    return this.parent.root();
-  };
+  public commit(): void {
+    const { queue } = this;
+    this.queue = [];
 
-  public link = <C extends MongoDoc = MongoDoc>(
-    collection: Mongo.Collection<C>,
-    resolver: ExtractPrimaryKeys<T>,
-    options?: LinkChildOptions
-  ): LinkChild<T, C> => {
-    const child = new LinkChild<T, C>(
-      this.context as MeteorPublicationContext<C>,
-      collection,
-      resolver,
-      this,
-      options
-    );
+    queue.forEach((q) => {
+      switch (q.type) {
+        case 'parentAdded': {
+          const keys = this.resolver(q.payload.doc);
+          if (keys) {
+            this.publicationContext.addToRegistry(q.payload.sourceId, keys);
+          }
+          break;
+        }
+        case 'parentChanged': {
+          const keys = this.resolver(q.payload.doc);
 
-    this.children.link<C>(child);
+          this.publicationContext.replaceFromRegistry(
+            q.payload.sourceId,
+            keys || /* istanbul ignore next */ []
+          );
+          break;
+        }
+        case 'parentRemoved': {
+          this.publicationContext.removeFromRegistry(q.payload.sourceId);
+          break;
+        }
+        case 'added': {
+          if (!this.publicationContext.addedChildrenIds.has(q.payload.id))
+            break;
+          // only add the dangling document when this instance is the primary
+          if (this.publicationContext.isPrimaryForChildId(q.payload.id)) {
+            this.publicationContext.added(
+              q.payload.id,
+              this.filterFields(q.payload.doc)
+            );
+          }
+          this.children.parentAdded(q.payload.id, q.payload.doc);
+          break;
+        }
+        case 'changed': {
+          if (!this.publicationContext.hasChildId(q.payload.id)) break;
 
-    return child;
-  };
-
-  private filterFields = (
-    doc: Partial<WithoutId<T>>
-  ): Partial<WithoutId<T>> => {
-    if (this.fields) return filterFields(this.fields, doc);
-
-    return doc;
-  };
+          this.publicationContext.changed(
+            q.payload.id,
+            this.filterFields(q.payload.fields)
+          );
+          this.children.parentChanged(q.payload.id, q.payload.doc);
+          break;
+        }
+        case 'replaced': {
+          if (!this.publicationContext.hasChildId(q.payload.id)) break;
+          this.publicationContext.replaced(
+            q.payload.id,
+            this.filterFields(q.payload.doc)
+          );
+          this.children.parentChanged(q.payload.id, q.payload.doc);
+          break;
+        }
+        case 'removed': {
+          if (!this.publicationContext.hasChildId(q.payload.id)) break;
+          this.publicationContext.removeChildFromRegistry(q.payload.id);
+          break;
+        }
+        /* istanbul ignore next */
+        default:
+      }
+    });
+  }
 
   /** @internal */
-  public commit(): void {
-    const added: Array<T> = [];
+  public flush(): void {
+    const added: Array<{ _id: string } & Partial<WithoutId<T>>> = [];
     const removed: Array<string> = [];
     if (this.publicationContext.addedChildrenIds.size) {
       this.collection
@@ -130,7 +208,7 @@ export class LinkChild<
     }
 
     added.forEach(({ _id, ...doc }) => {
-      this.children.parentAdded(_id, doc);
+      this.children.parentAdded(_id, doc as Partial<WithoutId<T>>);
     });
 
     removed.forEach((_id) => {
@@ -142,93 +220,137 @@ export class LinkChild<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (
-    sourceId: string,
-    parentDoc: Partial<WithoutId<P>>
-  ): void => {
-    const keys = this.resolver(parentDoc);
-    if (keys) this.publicationContext.addToRegistry(sourceId, keys);
+  public parentAdded = (sourceId: string, doc: Partial<WithoutId<P>>): void => {
+    this.queue.push({
+      type: 'parentAdded',
+      payload: { sourceId, doc },
+    });
   };
 
   // handle change from parent
   /** @internal */
   public parentChanged = (sourceId: string, doc: WithoutId<P>): void => {
-    const keys = this.resolver(doc);
-    this.publicationContext.replaceFromRegistry(
-      sourceId,
-      keys || /* istanbul ignore next */ []
-    );
+    this.queue.push({
+      type: 'parentChanged',
+      payload: { sourceId, doc },
+    });
   };
 
   // handle remove from parent
   /** @internal */
   public parentRemoved = (sourceId: string): void => {
-    this.publicationContext.removeFromRegistry(sourceId);
+    this.queue.push({
+      type: 'parentRemoved',
+      payload: {
+        sourceId,
+      },
+    });
   };
 
   // handle added events from change streams
   // this is only used in cases where a linked document has been inserted
   // after the related document e.g. the insertion order/foreign key
   // relationship has been broken
-  private added = (_id: string, doc: WithoutId<T>): void => {
-    if (!this.publicationContext.addedChildrenIds.has(_id)) return;
-    // only add the dangling document when this instance is the primary
-    if (this.publicationContext.isPrimaryForChildId(_id)) {
-      this.publicationContext.added(_id, this.filterFields(doc));
-    }
-    this.children.parentAdded(_id, doc);
+  private added = (id: string, doc: WithoutId<T>): void => {
+    this.queue.push({
+      type: 'added',
+      payload: {
+        id,
+        doc,
+      },
+    });
+    this.commit();
+    this.flush();
   };
 
   // handle change events from change streams
   private changed = (
-    _id: string,
+    id: string,
     fields: Partial<WithoutId<T>>,
     doc: WithoutId<T>
   ): void => {
-    if (!this.publicationContext.hasChildId(_id)) return;
-    this.publicationContext.changed(_id, this.filterFields(fields));
-    this.children.parentChanged(_id, doc);
+    this.queue.push({
+      type: 'changed',
+      payload: {
+        id,
+        fields,
+        doc,
+      },
+    });
     this.commit();
+    this.flush();
   };
 
   // handle replace events from change streams
-  private replaced = (_id: string, doc: WithoutId<T>): void => {
-    if (!this.publicationContext.hasChildId(_id)) return;
-    this.publicationContext.replaced(_id, this.filterFields(doc));
-    this.children.parentChanged(_id, doc);
+  private replaced = (id: string, doc: WithoutId<T>): void => {
+    this.queue.push({
+      type: 'replaced',
+      payload: {
+        id,
+        doc,
+      },
+    });
     this.commit();
+    this.flush();
   };
 
   // removes a child even if still related to the parent
   // which happens when the child is removed before all
   // related parents have been removed, counterpart wise to this.added()
-  private removed = (_id: string): void => {
-    if (!this.publicationContext.hasChildId(_id)) return;
-    this.publicationContext.removeChildFromRegistry(_id);
+  private removed = (id: string): void => {
+    this.queue.push({
+      type: 'removed',
+      payload: {
+        id,
+      },
+    });
     this.commit();
+    this.flush();
   };
 
   /** @internal */
   public observe(): void {
-    this.stopListener = ChangeStreamRegistry.addListener<T>(
-      this.collection.rawCollection(),
-      {
-        added: this.added,
-        changed: this.changed,
-        replaced: this.replaced,
-        removed: this.removed,
-      }
-    );
-    this.children.observe();
+    this.addListener({
+      added: this.added,
+      changed: this.changed,
+      replaced: this.replaced,
+      removed: this.removed,
+    });
   }
 
-  /** @internal */
-  public stop = async (): Promise<void> => {
-    const { stopListener } = this;
-    this.stopListener = undefined;
+  public link = <C extends MongoDoc = MongoDoc>(
+    collection: Mongo.Collection<C>,
+    resolver: ExtractPrimaryKeys<T>,
+    options?: LinkChildOptions
+  ): LinkChild<T, C> => {
+    const child = new LinkChild<T, C>(
+      this.context as MeteorPublicationContext<C>,
+      collection,
+      resolver,
+      this,
+      options
+    );
 
-    if (stopListener) await stopListener();
+    this.children.link<C>(child);
 
-    await this.children.stop();
+    return child;
+  };
+
+  public select = <C extends MongoDoc = MongoDoc>(
+    collection: Mongo.Collection<C>,
+    resolver: ExtractSelector<T, C>,
+    options?: LinkChildSelectorOptions
+  ): LinkChildSelector<T, C> => {
+    const child = new LinkChildSelector<T, C>(
+      this.context as MeteorPublicationContext<C>,
+      collection,
+      resolver,
+      this,
+      options
+    );
+
+    this.children.link<C>(child);
+
+    return child;
   };
 }
