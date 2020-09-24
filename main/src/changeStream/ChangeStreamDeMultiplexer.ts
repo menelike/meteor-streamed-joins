@@ -1,7 +1,8 @@
 import type { Collection } from 'mongodb';
 
+import type { ChangeStreamCallBacks, MongoDoc } from '../types';
+
 import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
-import type { ChangeStreamCallBacks, MongoDoc } from './types';
 
 type StopFunc = () => Promise<void>;
 

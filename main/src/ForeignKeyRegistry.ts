@@ -100,8 +100,10 @@ class ForeignKeyRegistry {
 
   public remove(id: string, parentId: string): void {
     const key = this.assembleKey(id, parentId);
-    this._remove(id, parentId, [...this.parentToChildren[key]]);
-    delete this.parentToChildren[key];
+    if (key in this.parentToChildren) {
+      this._remove(id, parentId, [...this.parentToChildren[key]]);
+      delete this.parentToChildren[key];
+    }
   }
 
   // removes the child from all parents for a specific publicationContext

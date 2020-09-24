@@ -2,9 +2,9 @@ import type { Collection } from 'mongodb';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
 
-import MongoMemoryReplSet from '../tests/MongoMemoryReplSet';
-import sleep from '../tests/sleep';
-import { waitUntilHaveBeenCalledTimes } from '../tests/waitUntil';
+import MongoMemoryReplSet from '../../tests/MongoMemoryReplSet';
+import sleep from '../../tests/sleep';
+import { waitUntilHaveBeenCalledTimes } from '../../tests/waitUntil';
 
 import ChangeStreamMultiplexer from './ChangeStreamMultiplexer';
 

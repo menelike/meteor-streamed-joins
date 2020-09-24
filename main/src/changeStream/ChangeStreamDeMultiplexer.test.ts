@@ -1,7 +1,7 @@
-import MongoMemoryReplSet from '../tests/MongoMemoryReplSet';
+import MongoMemoryReplSet from '../../tests/MongoMemoryReplSet';
+import { ChangeStreamCallBacks } from '../types';
 
 import ChangeStreamDeMultiplexer from './ChangeStreamDeMultiplexer';
-import { ChangeStreamCallBacks } from './types';
 
 const mongoDB = new MongoMemoryReplSet();
 

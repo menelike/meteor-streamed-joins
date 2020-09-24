@@ -8,6 +8,7 @@ const linkChildMock = ({
   changed: jest.fn(),
   replaced: jest.fn(),
   commit: jest.fn(),
+  flush: jest.fn(),
   observe: jest.fn(),
   stop: jest.fn(),
 } as unknown) as LinkChild;
@@ -65,13 +66,15 @@ describe('ChildDeMultiplexer', () => {
   });
 
   it('calls commit', () => {
-    expect.assertions(2);
+    expect.assertions(4);
 
     const deMultiplexer = new ChildDeMultiplexer();
     deMultiplexer.link(linkChildMock);
     deMultiplexer.commit();
     expect(linkChildMock.commit).toHaveBeenCalledTimes(1);
     expect(linkChildMock.commit).toHaveBeenNthCalledWith(1);
+    expect(linkChildMock.flush).toHaveBeenCalledTimes(1);
+    expect(linkChildMock.flush).toHaveBeenNthCalledWith(1);
   });
 
   it('calls observe', () => {

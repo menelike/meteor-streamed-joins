@@ -10,21 +10,21 @@ import { waitUntilHaveBeenCalledTimes } from '../tests/waitUntil';
 
 import DocumentMatcher from './DocumentMatcher';
 import Link from './Link';
-import type { LinkChild } from './LinkChild';
+import type { LinkChildSelector } from './LinkChildSelector';
 
 const mongoDB = new MongoMemoryReplSet();
 
 const DEFAULT_WAIT_IN_MS = 250;
 
-const COLLECTION_NAME_ROOT = 'LINK_CHILD_ROOT';
+const COLLECTION_NAME_ROOT = 'LINK_CHILD_SELECTOR_ROOT';
 
-const COLLECTION_NAME_CHILD = 'LINK_CHILD_ROOT_CHILD';
+const COLLECTION_NAME_CHILD = 'LINK_CHILD_SELECTOR_ROOT_CHILD';
 
-const COLLECTION_NAME_GRANDCHILD = 'LINK_CHILD_ROOT_GRANDCHILD';
+const COLLECTION_NAME_GRANDCHILD = 'LINK_CHILD_SELECTOR_ROOT_GRANDCHILD';
 
 let root: Link | undefined;
-let child: LinkChild | undefined;
-let grandChild: LinkChild | undefined;
+let child: LinkChildSelector | undefined;
+let grandChild: LinkChildSelector | undefined;
 
 beforeAll(async () => {
   await mongoDB.connect();
@@ -59,7 +59,713 @@ afterAll(async () => {
   await mongoDB.close();
 }, 20000);
 
-describe('LinkChild', () => {
+describe('LinkChildSelector', () => {
+  it('previously resolved parent does not resolve after change', async () => {
+    expect.assertions(5);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation((doc) =>
+        doc.group
+          ? new DocumentMatcher(
+              { group: doc.group },
+              (d) => d.group === doc.group
+            )
+          : undefined
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { group: rootDocument.group }
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { group: childDocument.group }
+    );
+
+    await rootCollection.updateOne(
+      { _id: rootDocument._id },
+      { $unset: { group: '' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_CHILD,
+      childDocument._id
+    );
+  });
+
+  it('update on child matches afterwards and adds the child', async () => {
+    expect.assertions(4);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { group: rootDocument.group }
+    );
+
+    await childCollection.updateOne(
+      { _id: childDocument._id },
+      { $set: { group: 'A' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { group: rootDocument.group }
+    );
+  });
+
+  it('replace on child matches afterwards and adds the child', async () => {
+    expect.assertions(4);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { group: rootDocument.group }
+    );
+
+    await childCollection.replaceOne(
+      { _id: childDocument._id },
+      { group: 'A' }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { group: rootDocument.group }
+    );
+  });
+
+  it('previously matched child does not match after update and is removed', async () => {
+    expect.assertions(5);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { group: rootDocument.group }
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { group: rootDocument.group }
+    );
+
+    await childCollection.updateOne(
+      { _id: childDocument._id },
+      { $set: { group: 'B' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_CHILD,
+      childDocument._id
+    );
+  });
+
+  it('previously matched child does not match after replace and is removed', async () => {
+    expect.assertions(5);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { group: rootDocument.group }
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { group: rootDocument.group }
+    );
+
+    await childCollection.replaceOne(
+      { _id: childDocument._id },
+      { group: 'B' }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_CHILD,
+      childDocument._id
+    );
+  });
+
+  it('a parent update with the same resolver does not hit the database again', async () => {
+    expect.assertions(5);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    // @ts-ignore
+    await waitUntilHaveBeenCalledTimes(childCollectionMock.find, 1);
+
+    expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+
+    await rootCollection.updateOne(
+      { _id: rootDocument._id },
+      { $set: { some: 'thing' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+
+    expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('an unmatched added child is not published', async () => {
+    expect.assertions(2);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+
+    await childCollection.insertOne(childDocument);
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+  });
+
+  it('two parents match, after an child update only one parent matches', async () => {
+    expect.assertions(9);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocumentA = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    const rootDocumentB = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+    await rootCollection.insertMany([rootDocumentA, rootDocumentB]);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      groups: [rootDocumentA.group, rootDocumentB.group],
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocumentA, rootDocumentB];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher({ groups: doc.group }, (d) =>
+            d.groups.includes(doc.group)
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+
+    await childCollection.updateOne(
+      { _id: childDocument._id },
+      { $pull: { groups: rootDocumentA.group } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+
+    await childCollection.updateOne(
+      { _id: childDocument._id },
+      { $pull: { groups: rootDocumentB.group } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('two parents match, after an child replace only one parent matches', async () => {
+    expect.assertions(6);
+
+    const db = mongoDB.db();
+
+    const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocumentA = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    const rootDocumentB = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+    await rootCollection.insertMany([rootDocumentA, rootDocumentB]);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      groups: [rootDocumentA.group, rootDocumentB.group],
+    };
+    await childCollection.insertOne(childDocument);
+
+    const rootCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_ROOT);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [rootDocumentA, rootDocumentB];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
+    const childCollectionMock = ({
+      rawCollection: jest.fn().mockImplementation(() => {
+        return db.collection(COLLECTION_NAME_CHILD);
+      }),
+      find: jest.fn().mockImplementation(() => {
+        return [childDocument];
+      }),
+    } as unknown) as Mongo.Collection<any>;
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher({ groups: doc.group }, (d) =>
+            d.groups.includes(doc.group)
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+
+    await childCollection.replaceOne(
+      { _id: childDocument._id },
+      { groups: [rootDocumentB.group] }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 4);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+
+    await childCollection.replaceOne(
+      { _id: childDocument._id },
+      { groups: [] }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 2);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(2);
+  });
+
   it('resolves root from children', () => {
     expect.assertions(2);
 
@@ -83,7 +789,7 @@ describe('LinkChild', () => {
         return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    child = root.link(childCollectionMock, () => undefined);
+    child = root.select(childCollectionMock, () => undefined);
 
     expect(child.root()).toBe(root);
 
@@ -96,7 +802,7 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
 
-    grandChild = root.link(grandChildCollectionMock, () => undefined);
+    grandChild = root.select(grandChildCollectionMock, () => undefined);
     expect(grandChild.root()).toBe(root);
   });
 
@@ -111,8 +817,8 @@ describe('LinkChild', () => {
       }),
       find: jest.fn().mockImplementation(() => {
         return [
-          { _id: 'documentA', child: 'childA' },
-          { _id: 'documentB', child: 'childB' },
+          { _id: 'documentA', group: 'groupA' },
+          { _id: 'documentB', group: 'groupB' },
         ];
       }),
     } as unknown) as Mongo.Collection<any>;
@@ -124,44 +830,52 @@ describe('LinkChild', () => {
       }),
       find: jest.fn().mockImplementation(() => {
         return [
-          { _id: 'childA', prop: 'A' },
-          { _id: 'childB', prop: 'B' },
+          { _id: 'childA', group: 'groupA' },
+          { _id: 'childB', group: 'groupB' },
         ];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(2);
-    expect(childResolver).toHaveBeenNthCalledWith(1, { child: 'childA' });
-    expect(childResolver).toHaveBeenNthCalledWith(2, { child: 'childB' });
+    expect(childResolver).toHaveBeenNthCalledWith(1, { group: 'groupA' });
+    expect(childResolver).toHaveBeenNthCalledWith(2, { group: 'groupB' });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       'documentA',
-      { child: 'childA' }
+      { group: 'groupA' }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_ROOT,
       'documentB',
-      { child: 'childB' }
+      { group: 'groupB' }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_CHILD,
       'childA',
-      { prop: 'A' }
+      { group: 'groupA' }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       4,
       COLLECTION_NAME_CHILD,
       'childB',
-      { prop: 'B' }
+      { group: 'groupB' }
     );
   });
 
@@ -173,15 +887,15 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      prop: 'A',
-    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
     await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
@@ -202,8 +916,17 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+
+    child = root.select(childCollectionMock, childResolver);
 
     root.observe();
 
@@ -234,16 +957,16 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      prop: 'A',
-      something: 'else',
-    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      something: 'else',
+    };
     await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
@@ -264,8 +987,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     root.observe();
 
@@ -295,16 +1026,16 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      prop: 'A',
-      something: 'else',
-    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      something: 'else',
+    };
     await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
@@ -325,8 +1056,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     root.observe();
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
@@ -335,7 +1074,7 @@ describe('LinkChild', () => {
 
     await childCollection.replaceOne(
       { _id: childDocument._id },
-      { prop: 'changed', something: 'different' }
+      { group: 'A', prop: 'changed', something: 'different' }
     );
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
@@ -351,7 +1090,7 @@ describe('LinkChild', () => {
       3,
       COLLECTION_NAME_CHILD,
       childDocument._id,
-      { prop: 'changed', something: 'different' }
+      { group: 'A', prop: 'changed', something: 'different' }
     );
   });
 
@@ -363,18 +1102,17 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      prop: 'A',
-      something: 'else',
-    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
-
-    await childCollection.insertOne(childDocument);
     await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      something: 'else',
+    };
+    await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -395,8 +1133,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver, {
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
 
@@ -428,18 +1174,17 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      prop: 'A',
-      something: 'else',
-    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
-
-    await childCollection.insertOne(childDocument);
     await rootCollection.insertOne(rootDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      something: 'else',
+    };
+    await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -460,8 +1205,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver, {
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
 
@@ -473,7 +1226,7 @@ describe('LinkChild', () => {
 
     await childCollection.replaceOne(
       { _id: childDocument._id },
-      { prop: 'changed', something: 'differentAgain' }
+      { group: 'A', prop: 'changed', something: 'differentAgain' }
     );
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
@@ -502,24 +1255,22 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
     const childDocumentA = {
       _id: new ObjectID().toHexString(),
-      prop: 'A',
+      group: 'A',
       something: 'else',
     };
     const childDocumentB = {
       _id: new ObjectID().toHexString(),
-      prop: 'B',
+      group: 'B',
       something: 'else',
     };
-    const rootDocument = {
-      _id: new ObjectID().toHexString(),
-      child: childDocumentA._id,
-    };
-
-    await childCollection.insertOne(childDocumentA);
-    await childCollection.insertOne(childDocumentB);
-    await rootCollection.insertOne(rootDocument);
+    await childCollection.insertMany([childDocumentA, childDocumentB]);
 
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -540,8 +1291,16 @@ describe('LinkChild', () => {
         return [childDocumentA];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver, {
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
 
@@ -573,24 +1332,22 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    await rootCollection.insertOne(rootDocument);
     const childDocumentA = {
       _id: new ObjectID().toHexString(),
-      prop: 'A',
+      group: 'A',
       something: 'else',
     };
     const childDocumentB = {
       _id: new ObjectID().toHexString(),
-      prop: 'B',
+      group: 'B',
       something: 'else',
     };
-    const rootDocument = {
-      _id: new ObjectID().toHexString(),
-      child: childDocumentA._id,
-    };
-
-    await childCollection.insertOne(childDocumentA);
-    await childCollection.insertOne(childDocumentB);
-    await rootCollection.insertOne(rootDocument);
+    await childCollection.insertMany([childDocumentA, childDocumentB]);
 
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -611,8 +1368,16 @@ describe('LinkChild', () => {
         return [childDocumentA];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver, {
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
 
@@ -624,13 +1389,13 @@ describe('LinkChild', () => {
 
     await childCollection.replaceOne(
       { _id: childDocumentB._id },
-      { prop: 'changed' }
+      { group: 'B', prop: 'changed' }
     );
 
     // replace this only to trigger waitUntilHaveBeenCalledTimes
     await childCollection.replaceOne(
       { _id: childDocumentA._id },
-      { prop: 'changed' }
+      { group: 'A', prop: 'changed' }
     );
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
@@ -650,7 +1415,7 @@ describe('LinkChild', () => {
         return db.collection(COLLECTION_NAME_ROOT);
       }),
       find: jest.fn().mockImplementation(() => {
-        return [{ _id: 'documentA', unknownProp: 'childA' }];
+        return [{ _id: 'documentA', group: 'A' }];
       }),
     } as unknown) as Mongo.Collection<any>;
 
@@ -664,19 +1429,19 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
     const childResolver = jest.fn().mockImplementation(() => undefined);
-    child = root.link(childCollectionMock, childResolver);
+    child = root.select(childCollectionMock, childResolver);
 
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, { unknownProp: 'childA' });
+    expect(childResolver).toHaveBeenNthCalledWith(1, { group: 'A' });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       'documentA',
-      { unknownProp: 'childA' }
+      { group: 'A' }
     );
   });
 
@@ -707,7 +1472,7 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
     const childResolver = jest.fn().mockImplementation(() => undefined);
-    child = root.link(childCollectionMock, childResolver);
+    child = root.select(childCollectionMock, childResolver);
     // @ts-ignore
     child.added = jest.fn().mockImplementation(() => undefined);
 
@@ -760,7 +1525,7 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
     const childResolver = jest.fn().mockImplementation(() => undefined);
-    child = root.link(childCollectionMock, childResolver);
+    child = root.select(childCollectionMock, childResolver);
     // @ts-ignore
     child.removed = jest.fn().mockImplementation(() => undefined);
 
@@ -791,50 +1556,73 @@ describe('LinkChild', () => {
 
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
+
+    const rootDocumentA = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
     const rootDocumentB = {
       _id: new ObjectID().toHexString(),
+      group: 'B',
     };
     const rootDocumentC = {
       _id: new ObjectID().toHexString(),
+      group: 'C',
     };
-    const rootDocumentAId = new ObjectID().toHexString();
     const childDocument = {
       _id: new ObjectID().toHexString(),
-      roots: [rootDocumentB._id, rootDocumentC._id, rootDocumentAId],
+      groups: [rootDocumentA.group, rootDocumentB.group, rootDocumentC.group],
     };
-    const rootDocumentA = {
-      _id: rootDocumentAId,
-      child: childDocument._id,
-    };
-
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_ROOT);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return selector?._id ? [rootDocumentB, rootDocumentC] : [];
+        if (selector?.group === 'A') {
+          return [rootDocumentA];
+        }
+
+        if (selector?.$or) {
+          return [rootDocumentA, rootDocumentB, rootDocumentC];
+        }
+
+        return [];
+        // return selector?._id ? [rootDocumentB, rootDocumentC] : [];
       }),
     } as unknown) as Mongo.Collection<any>;
 
     root = new Link(
       MeteorPublicationMock,
       rootCollectionMock,
-      {},
-      (doc) => !!doc.child
+      { group: 'A' },
+      (doc) => doc.group === 'A'
     );
     const childCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_CHILD);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return selector?._id ? [childDocument] : [];
+        return selector?.$or ? [childDocument] : [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
-
-    const rootResolver = jest.fn().mockImplementation((doc) => doc.roots);
-    child.link(rootCollectionMock, rootResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher({ groups: doc.group }, (d) =>
+            d.groups.includes(doc.group)
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
+    const rootResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher({ group: { $in: doc.groups } }, (d) =>
+            doc.groups.includes(d.group)
+          )
+      );
+    child.select(rootCollectionMock, rootResolver);
 
     root.observe();
 
@@ -848,32 +1636,36 @@ describe('LinkChild', () => {
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 4);
 
     expect(rootCollectionMock.find).toHaveBeenCalledTimes(2);
-    expect(rootCollectionMock.find).toHaveBeenNthCalledWith(1, {});
-    expect(rootCollectionMock.find).toHaveBeenNthCalledWith(
-      2,
-      {
-        _id: { $in: [rootDocumentB._id, rootDocumentC._id] },
-      },
-      { fields: undefined }
-    );
+    expect(rootCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      group: 'A',
+    });
+    expect(rootCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      $or: [
+        {
+          group: {
+            $in: [
+              rootDocumentA.group,
+              rootDocumentB.group,
+              rootDocumentC.group,
+            ],
+          },
+        },
+      ],
+    });
 
     expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(childCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      $or: [{ groups: 'A' }],
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
+      group: rootDocumentA.group,
     });
 
     expect(rootResolver).toHaveBeenCalledTimes(1);
     expect(rootResolver).toHaveBeenNthCalledWith(1, {
-      roots: [rootDocumentB._id, rootDocumentC._id, rootDocumentA._id],
+      groups: [rootDocumentA.group, rootDocumentB.group, rootDocumentC.group],
     });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
@@ -881,25 +1673,25 @@ describe('LinkChild', () => {
       1,
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
-      { child: childDocument._id }
+      { group: rootDocumentA.group }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
-      { roots: [rootDocumentB._id, rootDocumentC._id, rootDocumentA._id] }
+      { groups: childDocument.groups }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_ROOT,
       rootDocumentB._id,
-      {}
+      { group: rootDocumentB.group }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       4,
       COLLECTION_NAME_ROOT,
       rootDocumentC._id,
-      {}
+      { group: rootDocumentC.group }
     );
   });
 
@@ -913,15 +1705,15 @@ describe('LinkChild', () => {
 
     const childDocumentA = {
       _id: new ObjectID().toHexString(),
-      prop: 'A',
+      group: 'A',
     };
     const childDocumentB = {
       _id: new ObjectID().toHexString(),
-      prop: 'B',
+      group: 'B',
     };
     const rootDocumentA = {
       _id: new ObjectID().toHexString(),
-      child: childDocumentA._id,
+      group: 'A',
     };
 
     const rootCollectionMock = ({
@@ -937,20 +1729,34 @@ describe('LinkChild', () => {
       MeteorPublicationMock,
       rootCollectionMock,
       {},
-      (doc) => !!doc.child
+      (doc) => !!doc.group
     );
     const childCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_CHILD);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return [childDocumentA, childDocumentB].filter((doc) =>
-          selector?._id.$in.includes(doc._id)
-        );
+        if (selector?.$or[0].group === childDocumentA.group) {
+          return [childDocumentA];
+        }
+
+        if (selector?.$or[0].group === childDocumentB.group) {
+          return [childDocumentB];
+        }
+        console.log(selector);
+        return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     await childCollection.insertMany([childDocumentA, childDocumentB]);
     await rootCollection.insertOne(rootDocumentA);
@@ -968,17 +1774,13 @@ describe('LinkChild', () => {
     expect(rootCollectionMock.find).toHaveBeenNthCalledWith(1, {});
 
     expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(childCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocumentA._id] },
-      },
-      { fields: undefined }
-    );
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      $or: [{ group: childDocumentA.group }],
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
+      group: rootDocumentA.group,
     });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
@@ -986,31 +1788,27 @@ describe('LinkChild', () => {
       1,
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
-      { child: childDocumentA._id }
+      { group: rootDocumentA.group }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocumentA._id,
-      { prop: 'A' }
+      { group: childDocumentA.group }
     );
 
     // now replace child A with child B
     await rootCollection.updateOne(
       { _id: rootDocumentA._id },
-      { $set: { child: childDocumentB._id } }
+      { $set: { group: childDocumentB.group } }
     );
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
 
     expect(childCollectionMock.find).toHaveBeenCalledTimes(2);
-    expect(childCollectionMock.find).toHaveBeenNthCalledWith(
-      2,
-      {
-        _id: { $in: [childDocumentB._id] },
-      },
-      { fields: undefined }
-    );
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      $or: [{ group: childDocumentB.group }],
+    });
 
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
@@ -1023,12 +1821,12 @@ describe('LinkChild', () => {
       3,
       COLLECTION_NAME_CHILD,
       childDocumentB._id,
-      { prop: 'B' }
+      { group: childDocumentB.group }
     );
   });
 
   it('one parent with multiple children from the same collection', async () => {
-    expect.assertions(12);
+    expect.assertions(13);
 
     const db = mongoDB.db();
 
@@ -1037,16 +1835,16 @@ describe('LinkChild', () => {
 
     const childDocumentA = {
       _id: new ObjectID().toHexString(),
-      prop: 'A',
+      group: 'A',
     };
     const childDocumentB = {
       _id: new ObjectID().toHexString(),
-      prop: 'B',
+      group: 'B',
     };
     const rootDocumentA = {
       _id: new ObjectID().toHexString(),
-      child: childDocumentA._id,
-      children: [childDocumentA._id, childDocumentB._id],
+      group: childDocumentA.group,
+      groups: [childDocumentA.group, childDocumentB.group],
     };
 
     const rootCollectionMock = ({
@@ -1058,29 +1856,41 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
 
-    root = new Link(
-      MeteorPublicationMock,
-      rootCollectionMock,
-      {},
-      (doc) => !!doc.child
-    );
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
     const childCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_CHILD);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return [childDocumentA, childDocumentB].filter((doc) =>
-          selector?._id.$in.includes(doc._id)
-        );
+        if (selector?.$or[0].group === 'A') {
+          return [childDocumentA];
+        }
+        if (selector?.$or[0].group.$in.length === 2) {
+          return [childDocumentA, childDocumentB];
+        }
+        return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => doc.group === d.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     const childrenResolver = jest
       .fn()
-      .mockImplementation((doc) => doc.children);
-    const children = root.link(childCollectionMock, childrenResolver);
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher({ group: { $in: doc.groups } }, (d) =>
+            doc.groups.includes(d.group)
+          )
+      );
+    const children = root.select(childCollectionMock, childrenResolver);
 
     await childCollection.insertMany([childDocumentA, childDocumentB]);
     await rootCollection.insertOne(rootDocumentA);
@@ -1097,25 +1907,24 @@ describe('LinkChild', () => {
     expect(rootCollectionMock.find).toHaveBeenCalledTimes(1);
     expect(rootCollectionMock.find).toHaveBeenNthCalledWith(1, {});
 
-    expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(childCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocumentA._id, childDocumentB._id] },
-      },
-      { fields: undefined }
-    );
+    expect(childCollectionMock.find).toHaveBeenCalledTimes(2);
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      $or: [{ group: 'A' }],
+    });
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      $or: [{ group: { $in: ['A', 'B'] } }],
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-      children: [childDocumentA._id, childDocumentB._id],
+      group: rootDocumentA.group,
+      groups: [childDocumentA.group, childDocumentB.group],
     });
 
     expect(childrenResolver).toHaveBeenCalledTimes(1);
     expect(childrenResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-      children: [childDocumentA._id, childDocumentB._id],
+      group: rootDocumentA.group,
+      groups: [childDocumentA.group, childDocumentB.group],
     });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
@@ -1124,28 +1933,28 @@ describe('LinkChild', () => {
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
       {
-        child: childDocumentA._id,
-        children: [childDocumentA._id, childDocumentB._id],
+        group: rootDocumentA.group,
+        groups: rootDocumentA.groups,
       }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocumentA._id,
-      { prop: 'A' }
+      { group: childDocumentA.group }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_CHILD,
       childDocumentB._id,
-      { prop: 'B' }
+      { group: childDocumentB.group }
     );
 
     await children.stop();
   });
 
   it('two parents with the same child', async () => {
-    expect.assertions(16);
+    expect.assertions(17);
 
     const db = mongoDB.db();
 
@@ -1157,16 +1966,20 @@ describe('LinkChild', () => {
 
     const grandChildDocument = {
       _id: new ObjectID().toHexString(),
+      group: 'B',
       prop: 'grandChild',
     };
     const childDocument = {
       _id: new ObjectID().toHexString(),
-      grandChild: grandChildDocument._id,
+      group: 'A',
+      grandGroup: 'B',
+      prop: 'child',
     };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
-      grandChild: grandChildDocument._id,
+      group: 'A',
+      grandGroup: 'B',
+      prop: 'root',
     };
 
     const rootCollectionMock = ({
@@ -1178,44 +1991,64 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
 
-    root = new Link(
-      MeteorPublicationMock,
-      rootCollectionMock,
-      {},
-      (doc) => !!doc.child
-    );
+    root = new Link(MeteorPublicationMock, rootCollectionMock, {}, () => true);
     const childCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_CHILD);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return [childDocument].filter((doc) =>
-          selector?._id.$in.includes(doc._id)
-        );
+        if (selector?.$or[0].group === 'A') {
+          return [childDocument];
+        }
+        console.log(selector);
+
+        return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     const grandChildCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
         return db.collection(COLLECTION_NAME_GRANDCHILD);
       }),
       find: jest.fn().mockImplementation((selector) => {
-        return [grandChildDocument].filter((doc) =>
-          selector?._id.$in.includes(doc._id)
-        );
+        if (selector?.$or[0].group === 'B') {
+          return [grandChildDocument];
+        }
+        console.log(selector);
+        return [];
       }),
     } as unknown) as Mongo.Collection<any>;
     const grandChildResolver = jest
       .fn()
-      .mockImplementation((doc) => [doc.grandChild]);
-    grandChild = root.link(grandChildCollectionMock, grandChildResolver);
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.grandGroup },
+            (d) => d.group === doc.grandGroup
+          )
+      );
+    grandChild = root.select(grandChildCollectionMock, grandChildResolver);
 
     const childToGrandChildResolver = jest
       .fn()
-      .mockImplementation((doc) => [doc.grandChild]);
-    const childToGrandChild = child.link(
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.grandGroup },
+            (d) => d.group === doc.grandGroup
+          )
+      );
+    const childToGrandChild = child.select(
       grandChildCollectionMock,
       childToGrandChildResolver
     );
@@ -1237,38 +2070,37 @@ describe('LinkChild', () => {
     expect(rootCollectionMock.find).toHaveBeenNthCalledWith(1, {});
 
     expect(childCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(childCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(childCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      $or: [{ group: 'A' }],
+    });
 
-    expect(grandChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(grandChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [grandChildDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(grandChildCollectionMock.find).toHaveBeenCalledTimes(2);
+    expect(grandChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      $or: [{ group: 'B' }],
+    });
+    expect(grandChildCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      $or: [{ group: 'B' }],
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: childDocument._id,
-      grandChild: grandChildDocument._id,
+      prop: rootDocument.prop,
+      group: rootDocument.group,
+      grandGroup: rootDocument.grandGroup,
     });
 
     expect(grandChildResolver).toHaveBeenCalledTimes(1);
     expect(grandChildResolver).toHaveBeenNthCalledWith(1, {
-      child: childDocument._id,
-      grandChild: grandChildDocument._id,
+      prop: rootDocument.prop,
+      group: rootDocument.group,
+      grandGroup: rootDocument.grandGroup,
     });
 
     expect(childToGrandChildResolver).toHaveBeenCalledTimes(1);
     expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, {
-      grandChild: grandChildDocument._id,
+      prop: childDocument.prop,
+      group: childDocument.group,
+      grandGroup: childDocument.grandGroup,
     });
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
@@ -1277,21 +2109,29 @@ describe('LinkChild', () => {
       COLLECTION_NAME_ROOT,
       rootDocument._id,
       {
-        child: childDocument._id,
-        grandChild: grandChildDocument._id,
+        prop: rootDocument.prop,
+        group: rootDocument.group,
+        grandGroup: rootDocument.grandGroup,
       }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
-      { grandChild: grandChildDocument._id }
+      {
+        prop: childDocument.prop,
+        group: childDocument.group,
+        grandGroup: childDocument.grandGroup,
+      }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_GRANDCHILD,
       grandChildDocument._id,
-      { prop: 'grandChild' }
+      {
+        prop: grandChildDocument.prop,
+        group: grandChildDocument.group,
+      }
     );
 
     await childToGrandChild.stop();
@@ -1305,10 +2145,10 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = { _id: new ObjectID().toHexString() };
+    const childDocument = { _id: new ObjectID().toHexString(), group: 'A' };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(childDocument);
 
@@ -1330,8 +2170,16 @@ describe('LinkChild', () => {
         return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     // wait some time otherwise observer fires an insert
     await sleep(DEFAULT_WAIT_IN_MS);
@@ -1348,29 +2196,29 @@ describe('LinkChild', () => {
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
-      { child: childDocument._id }
+      { group: rootDocument.group }
     );
 
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
-      {}
+      { group: childDocument.group }
     );
   });
 
   it('afterwards created children are only added on the primary publication context', async () => {
-    expect.assertions(6);
+    expect.assertions(8);
 
     const db = mongoDB.db();
 
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = { _id: new ObjectID().toHexString() };
+    const childDocument = { _id: new ObjectID().toHexString(), group: 'A' };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(childDocument);
 
@@ -1392,9 +2240,17 @@ describe('LinkChild', () => {
         return [];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
-    grandChild = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
+    grandChild = root.select(childCollectionMock, childResolver);
 
     // wait some time otherwise observer fires an insert
     await sleep(DEFAULT_WAIT_IN_MS);
@@ -1404,9 +2260,10 @@ describe('LinkChild', () => {
     // @ts-ignore otherwise we can not enforce the added call to
     // grandChild.added() to pass since the id is removed in child.added()
     child.publicationContext.commitAdded = jest.fn();
+
     expect(
       child.publicationContext.isPrimaryForChildId(childDocument._id)
-    ).toBeTruthy();
+    ).toBeFalsy();
     expect(
       grandChild.publicationContext.isPrimaryForChildId(childDocument._id)
     ).toBeFalsy();
@@ -1416,6 +2273,12 @@ describe('LinkChild', () => {
     await childCollection.insertOne(childDocument);
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    expect(
+      child.publicationContext.isPrimaryForChildId(childDocument._id)
+    ).toBeTruthy();
+    expect(
+      grandChild.publicationContext.isPrimaryForChildId(childDocument._id)
+    ).toBeFalsy();
     // make sure that child.publicationContext.commitAdded() has been
     // overriden correctly
     expect(child.publicationContext.addedChildrenIds).toEqual(
@@ -1426,14 +2289,14 @@ describe('LinkChild', () => {
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
-      { child: childDocument._id }
+      { group: rootDocument.group }
     );
 
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
-      {}
+      { group: childDocument.group }
     );
   });
 
@@ -1445,11 +2308,14 @@ describe('LinkChild', () => {
     const rootCollection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const childCollection = mongoDB.db().collection(COLLECTION_NAME_CHILD);
 
-    const childDocument = { _id: new ObjectID().toHexString() };
-    const unrelatedChildDocument = { _id: new ObjectID().toHexString() };
+    const childDocument = { _id: new ObjectID().toHexString(), group: 'A' };
+    const unrelatedChildDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(rootDocument);
     await childCollection.insertOne(childDocument);
@@ -1473,8 +2339,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
-    child = root.link(childCollectionMock, childResolver);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     // wait some time otherwise observer fires an insert
     await sleep(DEFAULT_WAIT_IN_MS);
@@ -1495,7 +2369,7 @@ describe('LinkChild', () => {
     );
   });
 
-  it('calls select from link', async () => {
+  it('calls link from select', async () => {
     expect.assertions(1);
 
     const db = mongoDB.db();
@@ -1506,21 +2380,21 @@ describe('LinkChild', () => {
       .db()
       .collection(COLLECTION_NAME_GRANDCHILD);
 
-    const childDocument = {
-      _id: new ObjectID().toHexString(),
-      group: 'A',
-    };
-    await childCollection.insertOne(childDocument);
     const rootDocument = {
       _id: new ObjectID().toHexString(),
-      child: childDocument._id,
+      group: 'A',
     };
     await rootCollection.insertOne(rootDocument);
     const grandChildDocument = {
       _id: new ObjectID().toHexString(),
-      group: 'A',
     };
     await grandChildCollection.insertOne(grandChildDocument);
+    const childDocument = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      child: grandChildDocument._id,
+    };
+    await childCollection.insertOne(childDocument);
 
     const rootCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -1541,7 +2415,16 @@ describe('LinkChild', () => {
         return [childDocument];
       }),
     } as unknown) as Mongo.Collection<any>;
-    child = root.link(childCollectionMock, (doc) => [doc.child]);
+    const childResolver = jest
+      .fn()
+      .mockImplementation(
+        (doc) =>
+          new DocumentMatcher(
+            { group: doc.group },
+            (d) => d.group === doc.group
+          )
+      );
+    child = root.select(childCollectionMock, childResolver);
 
     const grandChildCollectionMock = ({
       rawCollection: jest.fn().mockImplementation(() => {
@@ -1552,17 +2435,7 @@ describe('LinkChild', () => {
       }),
     } as unknown) as Mongo.Collection<any>;
 
-    const grandChildResolver = jest
-      .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
-
-    child.select(grandChildCollectionMock, grandChildResolver);
+    child.link(grandChildCollectionMock, (doc) => [doc.child]);
 
     root.observe();
 
