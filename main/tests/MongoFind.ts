@@ -8,7 +8,7 @@ const find = async <T extends MongoDoc>(
   collectionName: string,
   query?: FilterQuery<T>,
   fields?: { [P in keyof T]: boolean | number }
-): Promise<Array<T> | undefined> => {
+): Promise<Array<T>> => {
   const connection = await MongoClient.connect(uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -46,8 +46,8 @@ if (fields && fields !== 'undefined') {
 find(uri, collectionName, parsedQuery, parsedFields)
   .then((result) => {
     // eslint-disable-next-line promise/always-return
-    const r = result ? JSON.stringify(result) : 'undefined';
-    process.stdout.write(r);
+    if (!result) throw Error('received no data');
+    process.stdout.write(JSON.stringify(result));
     process.exit(0);
   })
   .catch((err) => {
