@@ -1,7 +1,7 @@
 import type { Mongo } from 'meteor/mongo';
 
 import { ChildBase, ChildBaseOptions } from './base/ChildBase';
-import { RootBase } from './base/RootBase';
+import type { RootBase } from './base/RootBase';
 import { LinkChildSelector } from './LinkChildSelector';
 import type {
   ExtractSelector,
@@ -101,7 +101,7 @@ export class LinkChild<
     resolver: ExtractPrimaryKeys<P>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parent: RootBase<P> | ChildBase<any, any>,
-    options?: LinkChildOptions | undefined
+    options: LinkChildOptions | undefined
   ) {
     super(context, collection, parent, {
       fields: options?.fields,

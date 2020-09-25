@@ -3,7 +3,10 @@ import type { Mongo } from 'meteor/mongo';
 import type { LinkChild } from '../LinkChild';
 import type { LinkChildSelector } from '../LinkChildSelector';
 import PublicationContext from '../PublicationContext';
-import type { MeteorPublicationContext } from '../PublicationContext';
+import type {
+  MeteorPublicationContext,
+  PublicationContextOptions,
+} from '../PublicationContext';
 import type { MongoDoc } from '../types';
 
 import type { ChildBase } from './ChildBase';
@@ -12,6 +15,7 @@ import type { LinkCommonOptions } from './LinkCommon';
 
 export type RootBaseOptions = {
   fields: LinkCommonOptions['fields'];
+  skipPublication: PublicationContextOptions['skipPublication'];
 };
 
 export class RootBase<T extends MongoDoc = MongoDoc> extends LinkCommon<T> {
@@ -31,7 +35,10 @@ export class RootBase<T extends MongoDoc = MongoDoc> extends LinkCommon<T> {
     super(context, collection, { fields: options?.fields });
     this.publicationContext = new PublicationContext(
       context,
-      collection.rawCollection().collectionName
+      collection.rawCollection().collectionName,
+      {
+        skipPublication: options?.skipPublication,
+      }
     );
     this.nodes = new Set([this]);
   }

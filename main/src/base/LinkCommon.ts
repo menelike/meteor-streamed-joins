@@ -27,7 +27,7 @@ export class LinkCommon<T extends MongoDoc = MongoDoc> {
   constructor(
     context: MeteorPublicationContext<T>,
     collection: Mongo.Collection<T>,
-    options?: LinkCommonOptions | undefined
+    options: LinkCommonOptions | undefined
   ) {
     this.context = context;
     this.collection = collection;

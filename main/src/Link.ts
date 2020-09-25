@@ -15,7 +15,7 @@ import type { MongoDoc, WithoutId } from './types';
 
 type Options = {
   fields?: RootBaseOptions['fields'];
-  skipPublication?: boolean;
+  skipPublication?: RootBaseOptions['skipPublication'];
 };
 
 class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
@@ -31,7 +31,10 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     selector: Mongo.Selector<T>,
     options?: Options
   ) {
-    super(context, collection, { fields: options?.fields });
+    super(context, collection, {
+      fields: options?.fields,
+      skipPublication: options?.skipPublication,
+    });
     this.selector = selector;
     this.matcher = new DocumentMatcher<T>(selector);
   }

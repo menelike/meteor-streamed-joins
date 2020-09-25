@@ -113,7 +113,7 @@ export class LinkChildSelector<
     resolver: ExtractSelector<P, T>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parent: RootBase<P> | ChildBase<any, any>,
-    options?: LinkChildSelectorOptions | undefined
+    options: LinkChildSelectorOptions | undefined
   ) {
     super(context, collection, parent, {
       fields: options?.fields,

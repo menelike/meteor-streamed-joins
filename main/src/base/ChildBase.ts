@@ -1,6 +1,9 @@
 import type { Mongo } from 'meteor/mongo';
 
-import type { MeteorPublicationContext } from '../PublicationContext';
+import type {
+  MeteorPublicationContext,
+  PublicationContextOptions,
+} from '../PublicationContext';
 import PublicationContext from '../PublicationContext';
 import type { MongoDoc } from '../types';
 
@@ -10,7 +13,7 @@ import type { RootBase } from './RootBase';
 
 export type ChildBaseOptions = {
   fields: LinkCommonOptions['fields'];
-  skipPublication: boolean;
+  skipPublication: PublicationContextOptions['skipPublication'];
 };
 
 export class ChildBase<
