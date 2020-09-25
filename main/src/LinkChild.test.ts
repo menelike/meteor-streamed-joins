@@ -9,7 +9,6 @@ import MongoMemoryReplSet from '../tests/MongoMemoryReplSet';
 import sleep from '../tests/sleep';
 import { waitUntilHaveBeenCalledTimes } from '../tests/waitUntil';
 
-import DocumentMatcher from './DocumentMatcher';
 import Link from './Link';
 import type { LinkChild } from './LinkChild';
 
@@ -1135,7 +1134,7 @@ describe('LinkChild', () => {
 
     const grandChildResolver = jest
       .fn()
-      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
+      .mockImplementation((doc) => ({ group: doc.group }));
 
     child.select(GrandChildCollectionMock, grandChildResolver);
 

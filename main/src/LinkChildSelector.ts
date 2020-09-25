@@ -2,7 +2,7 @@ import type { Mongo } from 'meteor/mongo';
 
 import { ChildBase, ChildBaseOptions } from './base/ChildBase';
 import type { RootBase } from './base/RootBase';
-import type DocumentMatcher from './DocumentMatcher';
+import DocumentMatcher from './DocumentMatcher';
 import { LinkChild } from './LinkChild';
 import type { ExtractPrimaryKeys, LinkChildOptions } from './LinkChild';
 import type { MeteorPublicationContext } from './PublicationContext';
@@ -17,7 +17,7 @@ export type LinkChildSelectorOptions = {
 export type ExtractSelector<
   P extends MongoDoc = MongoDoc,
   T extends MongoDoc = MongoDoc
-> = (document: Partial<WithoutId<P>>) => DocumentMatcher<T> | undefined;
+> = (document: Partial<WithoutId<P>>) => Mongo.Selector<T> | undefined;
 
 type ParentAdded<
   P extends MongoDoc = MongoDoc,
@@ -113,7 +113,7 @@ export class LinkChildSelector<
     resolver: ExtractSelector<P, T>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     parent: RootBase<P> | ChildBase<any, any>,
-    options?: LinkChildOptions | undefined
+    options?: LinkChildSelectorOptions | undefined
   ) {
     super(context, collection, parent, {
       fields: options?.fields,
@@ -313,9 +313,10 @@ export class LinkChildSelector<
   // handle add from parent
   /** @internal */
   public parentAdded = (sourceId: string, doc: Partial<WithoutId<P>>): void => {
-    const matcher = this.resolver(doc);
+    const selector = this.resolver(doc);
 
-    if (matcher) {
+    if (selector) {
+      const matcher = new DocumentMatcher<T>(selector);
       this.queue.push({
         type: 'parentAdded',
         payload: { sourceId, doc, matcher },
@@ -328,9 +329,10 @@ export class LinkChildSelector<
   // handle change from parent
   /** @internal */
   public parentChanged = (sourceId: string, doc: WithoutId<P>): void => {
-    const matcher = this.resolver(doc);
+    const selector = this.resolver(doc);
 
-    if (matcher) {
+    if (selector) {
+      const matcher = new DocumentMatcher<T>(selector);
       this.queue.push({
         type: 'parentChanged',
         payload: { sourceId, doc, matcher },
