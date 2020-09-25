@@ -70,8 +70,6 @@ jobs:
 
       - name: unit test:coverage
         run: ./node_modules/.bin/lerna run test:coverage
-        env:
-          MONGO_CLIENT_PATH: /usr/bin/mongo
 
       - name: codecov
         env:
