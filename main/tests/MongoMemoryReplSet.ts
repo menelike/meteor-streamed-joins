@@ -1,6 +1,13 @@
-import { Db, MongoClient } from 'mongodb';
-// @ts-ignore
-import { MongoMemoryReplSet as _MongoMemoryReplSet } from 'mongodb-memory-server';
+import { Mongo } from 'meteor/mongo';
+import { Collection, Db, MongoClient } from 'mongodb';
+import {
+  MongoMemoryReplSet as _MongoMemoryReplSet,
+  // @ts-ignore
+} from 'mongodb-memory-server';
+
+import { MongoDoc } from '../src/types';
+
+import { MeteorCollection } from './MeteorCollectionMock';
 
 let cleanup: (() => Promise<void> | void) | undefined;
 
@@ -69,6 +76,18 @@ class MongoMemoryReplSet {
       throw Error('no connection found, did you forget to call connect()?');
 
     return this.connection.db();
+  };
+
+  public mongoShell = async <T extends MongoDoc>(
+    collection: Collection<T>,
+    timeout = 2000
+  ): Promise<Mongo.Collection<T>> => {
+    const uri = await this.mongod.getUri();
+    return (new MeteorCollection<T>(
+      uri,
+      collection,
+      timeout
+    ) as unknown) as Mongo.Collection<T>;
   };
 }
 

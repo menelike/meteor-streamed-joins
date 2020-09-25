@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collection } from 'mongodb';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
@@ -16,6 +17,8 @@ const DEFAULT_WAIT_IN_MS = 250;
 
 let multiplexer: ChangeStreamMultiplexer | undefined;
 
+let TestCollection: Collection<any>;
+
 const listenerMock = {
   added: jest.fn(),
   changed: jest.fn(),
@@ -25,7 +28,7 @@ const listenerMock = {
 
 beforeAll(async () => {
   await mongoDB.connect();
-  await mongoDB.db().createCollection(COLLECTION_NAME);
+  TestCollection = await mongoDB.db().createCollection(COLLECTION_NAME);
 });
 
 afterEach(async () => {
@@ -76,8 +79,7 @@ describe('ChangeStreamMultiplexer', () => {
   it('starts watching for changes without listeners', async () => {
     expect.assertions(5);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
-    multiplexer = new ChangeStreamMultiplexer(collection, {
+    multiplexer = new ChangeStreamMultiplexer(TestCollection, {
       keepRunning: true,
     });
     expect(multiplexer.isWatching()).toBeTruthy();
@@ -85,7 +87,7 @@ describe('ChangeStreamMultiplexer', () => {
 
     multiplexer.addListener(listenerMock);
 
-    await collection.insertOne({
+    await TestCollection.insertOne({
       _id: new ObjectID().toHexString(),
     });
     await waitUntilHaveBeenCalledTimes(listenerMock.added, 1);
@@ -93,13 +95,13 @@ describe('ChangeStreamMultiplexer', () => {
 
     await multiplexer._stop();
 
-    multiplexer = new ChangeStreamMultiplexer(collection, {
+    multiplexer = new ChangeStreamMultiplexer(TestCollection, {
       keepRunning: false,
     });
     expect(multiplexer.isWatching()).toBeFalsy();
     multiplexer.addListener(listenerMock);
 
-    await collection.insertOne({
+    await TestCollection.insertOne({
       _id: new ObjectID().toHexString(),
     });
     // since we did not wait/slept after adding the listener
@@ -107,7 +109,7 @@ describe('ChangeStreamMultiplexer', () => {
     await waitUntilHaveBeenCalledTimes(listenerMock.added, 2);
     expect(listenerMock.added).toHaveBeenCalledTimes(1);
 
-    await collection.insertOne({
+    await TestCollection.insertOne({
       _id: new ObjectID().toHexString(),
     });
     await waitUntilHaveBeenCalledTimes(listenerMock.added, 2);
@@ -117,7 +119,6 @@ describe('ChangeStreamMultiplexer', () => {
   it('fire on insert', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
       _id: new ObjectID().toHexString(),
       name: 'foo',
@@ -125,13 +126,13 @@ describe('ChangeStreamMultiplexer', () => {
         bar: 'test',
       },
     };
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.insertOne(document);
+    await TestCollection.insertOne(document);
 
     await waitUntilHaveBeenCalledTimes(listenerMock.added, 1);
 
@@ -157,7 +158,6 @@ describe('ChangeStreamMultiplexer', () => {
   it('fire on update', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
       _id: new ObjectID().toHexString(),
       name: 'foo',
@@ -165,14 +165,14 @@ describe('ChangeStreamMultiplexer', () => {
         bar: 'test',
       },
     };
-    await collection.insertOne(document);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    await TestCollection.insertOne(document);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await TestCollection.updateOne(
       { _id: document._id },
       { $set: { name: 'changedFoo', 'nested.bar': 'changedTest' } }
     );
@@ -217,16 +217,15 @@ describe('ChangeStreamMultiplexer', () => {
   it('fire on replace', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = { _id: new ObjectID().toHexString(), name: 'foo' };
-    await collection.insertOne(document);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    await TestCollection.insertOne(document);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne(
+    await TestCollection.replaceOne(
       { _id: document._id },
       { name: 'changedFoo', nested: { bar: 'changed' } }
     );
@@ -257,7 +256,6 @@ describe('ChangeStreamMultiplexer', () => {
   it('fire on remove', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
       _id: new ObjectID().toHexString(),
       name: 'foo',
@@ -265,15 +263,15 @@ describe('ChangeStreamMultiplexer', () => {
         bar: 'test',
       },
     };
-    await collection.insertOne(document);
+    await TestCollection.insertOne(document);
 
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.deleteOne({ _id: document._id });
+    await TestCollection.deleteOne({ _id: document._id });
 
     await waitUntilHaveBeenCalledTimes(listenerMock.removed, 1);
 
@@ -292,7 +290,6 @@ describe('ChangeStreamMultiplexer', () => {
   it('merge removed fields on update', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
       _id: new ObjectID().toHexString(),
       name: 'foo',
@@ -301,14 +298,14 @@ describe('ChangeStreamMultiplexer', () => {
         bar: 'test',
       },
     };
-    await collection.insertOne(document);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    await TestCollection.insertOne(document);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await TestCollection.updateOne(
       { _id: document._id },
       { $set: { name: 'changedFoo' }, $unset: { toRemove: '' } }
     );
@@ -351,20 +348,22 @@ describe('ChangeStreamMultiplexer', () => {
   it('merge removed fields on replace', async () => {
     expect.assertions(2);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
     const document = {
       _id: new ObjectID().toHexString(),
       name: 'foo',
       toRemove: 'deleteMe',
     };
-    await collection.insertOne(document);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    await TestCollection.insertOne(document);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne({ _id: document._id }, { name: 'changedFoo' });
+    await TestCollection.replaceOne(
+      { _id: document._id },
+      { name: 'changedFoo' }
+    );
 
     await waitUntilHaveBeenCalledTimes(listenerMock.replaced, 1);
 
@@ -390,8 +389,7 @@ describe('ChangeStreamMultiplexer', () => {
   it('ignore unknown operation', async () => {
     expect.assertions(4);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);
@@ -414,8 +412,7 @@ describe('ChangeStreamMultiplexer', () => {
   it('receives undefined fullDocument on replace', async () => {
     expect.assertions(5);
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME);
-    multiplexer = new ChangeStreamMultiplexer(collection);
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
     multiplexer.addListener(listenerMock);
 
     await sleep(DEFAULT_WAIT_IN_MS);

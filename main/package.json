@@ -17,6 +17,7 @@
     "watch:transpile": "babel -w src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts' --ignore 'tests'",
     "watch:declaration": "tsc -w --declaration --outDir lib/ --rootDir src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json",
     "build": "npm run build:transpile && npm run build:declaration",
+    "build:mongoclient": "babel tests/MongoFind.ts --out-file tests/MongoFind.js --extensions '.ts'",
     "build:transpile": "babel --delete-dir-on-start src --out-dir lib --extensions '.ts' --ignore '**/*.test.ts' --ignore 'tests'",
     "build:declaration": "tsc --declaration --outDir lib/ --rootDir src --emitDeclarationOnly --skipLibCheck --project tsconfig.build.json",
     "precommit": "lint-staged",

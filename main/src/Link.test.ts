@@ -2,6 +2,7 @@
 import type { Mongo } from 'meteor/mongo';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
+import type { Collection } from 'mongodb';
 
 import MeteorPublicationMock from '../tests/MeteorPublicationMock';
 import MongoMemoryReplSet from '../tests/MongoMemoryReplSet';
@@ -18,9 +19,14 @@ const COLLECTION_NAME_ROOT = 'LINK_ROOT';
 
 let root: Link | undefined;
 
+let RootCollection: Collection<any>;
+
+let RootCollectionMock: Mongo.Collection<any>;
+
 beforeAll(async () => {
   await mongoDB.connect();
-  await mongoDB.db().createCollection(COLLECTION_NAME_ROOT);
+  RootCollection = await mongoDB.db().createCollection(COLLECTION_NAME_ROOT);
+  RootCollectionMock = await mongoDB.mongoShell(RootCollection);
 });
 
 afterEach(async () => {
@@ -41,16 +47,6 @@ describe('Link', () => {
   it('stops if publication context is stopped', async () => {
     expect.assertions(2);
 
-    const db = mongoDB.db();
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     let onStopFunc: (() => Promise<void>) | undefined;
     const publicationMock = {
       ...MeteorPublicationMock,
@@ -61,10 +57,10 @@ describe('Link', () => {
         }),
     };
 
-    root = new Link(publicationMock, collectionMock, {}, () => true);
+    root = new Link(publicationMock, RootCollectionMock, {}, () => true);
     root.observe();
 
-    const child = root.link(collectionMock, () => undefined);
+    const child = root.link(RootCollectionMock, () => undefined);
     const originalStop = child.stop;
     child.stop = jest.fn();
 
@@ -79,39 +75,22 @@ describe('Link', () => {
   it('resolves root from root', () => {
     expect.assertions(1);
 
-    const db = mongoDB.db();
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
 
     expect(root.root()).toBe(root);
   });
 
-  it('calls added on first run', () => {
+  it('calls added on first run', async () => {
     expect.assertions(3);
 
-    const db = mongoDB.db();
+    const rootDocuments = [
+      { _id: new ObjectID().toHexString(), child: 'childA' },
+      { _id: new ObjectID().toHexString(), child: 'childB' },
+    ];
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [
-          { _id: 'documentA', child: 'childA' },
-          { _id: 'documentB', child: 'childB' },
-        ];
-      }),
-    } as unknown) as Mongo.Collection<any>;
+    await RootCollection.insertMany(rootDocuments);
 
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
 
     root.observe();
 
@@ -119,13 +98,13 @@ describe('Link', () => {
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
-      'documentA',
+      rootDocuments[0]._id,
       { child: 'childA' }
     );
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_ROOT,
-      'documentB',
+      rootDocuments[1]._id,
       { child: 'childB' }
     );
   });
@@ -133,20 +112,8 @@ describe('Link', () => {
   it('calls added on document insert', async () => {
     expect.assertions(3);
 
-    const db = mongoDB.db();
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'something',
@@ -157,7 +124,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
 
@@ -173,35 +140,22 @@ describe('Link', () => {
   it('calls changed on pre-matched document update', async () => {
     expect.assertions(3);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'something',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [document];
-      }),
-    } as unknown) as Mongo.Collection<any>;
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
 
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'changed' } }
     );
@@ -220,39 +174,27 @@ describe('Link', () => {
   it('calls added on non-pre-matched document update', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     root = new Link(
       MeteorPublicationMock,
-      collectionMock,
+      RootCollectionMock,
       {},
       ({ prop }) => prop === 'match'
     );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'match' } }
     );
@@ -272,39 +214,27 @@ describe('Link', () => {
   it('calls remove on pre-matched document update', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'match',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [document];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     root = new Link(
       MeteorPublicationMock,
-      collectionMock,
+      RootCollectionMock,
       {},
       ({ prop }) => prop === 'match'
     );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'nonMatch' } }
     );
@@ -323,28 +253,15 @@ describe('Link', () => {
   it('calls removed/added on pre-matched document replace', async () => {
     expect.assertions(7);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'something',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [document];
-      }),
-    } as unknown) as Mongo.Collection<any>;
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
 
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
@@ -353,7 +270,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne(
+    await RootCollection.replaceOne(
       { _id: document._id },
       { prop: 'changed', other: 'static' }
     );
@@ -379,39 +296,27 @@ describe('Link', () => {
   it('calls added on non-pre-matched document replace', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     root = new Link(
       MeteorPublicationMock,
-      collectionMock,
+      RootCollectionMock,
       {},
       ({ prop }) => prop === 'match'
     );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne(
+    await RootCollection.replaceOne(
       { _id: document._id },
       { prop: 'match', other: 'static' }
     );
@@ -431,39 +336,27 @@ describe('Link', () => {
   it('calls remove on pre-matched document replace', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'match',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [document];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     root = new Link(
       MeteorPublicationMock,
-      collectionMock,
+      RootCollectionMock,
       {},
       ({ prop }) => prop === 'match'
     );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne(
+    await RootCollection.replaceOne(
       { _id: document._id },
       { prop: 'nonMatch', other: 'static' }
     );
@@ -482,39 +375,27 @@ describe('Link', () => {
   it('calls remove on remove', async () => {
     expect.assertions(3);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'match',
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [document];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     root = new Link(
       MeteorPublicationMock,
-      collectionMock,
+      RootCollectionMock,
       {},
       ({ prop }) => prop === 'match'
     );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.deleteOne({ _id: document._id });
+    await RootCollection.deleteOne({ _id: document._id });
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
 
@@ -529,8 +410,6 @@ describe('Link', () => {
   it('filters fields', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const documentA = {
       _id: new ObjectID().toHexString(),
       prop: 'propA',
@@ -543,20 +422,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true, {
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true, {
       fields: { prop: 1 },
     });
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
 
     root.observe();
 
@@ -564,7 +432,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.insertMany([documentA, documentB]);
+    await RootCollection.insertMany([documentA, documentB]);
 
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
 
@@ -586,28 +454,15 @@ describe('Link', () => {
   it('ignore unmatched document on added', async () => {
     expect.assertions(4);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     const matcher = jest
       .fn()
       .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(MeteorPublicationMock, collectionMock, {}, matcher);
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, matcher);
 
     root.observe();
 
@@ -615,7 +470,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     await waitUntilHaveBeenCalledTimes(matcher, 1);
     expect(matcher).toHaveBeenCalledTimes(1);
@@ -626,29 +481,22 @@ describe('Link', () => {
   it('ignore unmatched document on update', async () => {
     expect.assertions(6);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     const matcher = jest
       .fn()
       .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(MeteorPublicationMock, collectionMock, {}, matcher);
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      { prop: 'match' },
+      matcher
+    );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
 
@@ -656,7 +504,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.updateOne(
+    await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'stillNonMatch' } }
     );
@@ -672,29 +520,22 @@ describe('Link', () => {
   it('ignore unmatched document on replace', async () => {
     expect.assertions(6);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
-
     const matcher = jest
       .fn()
       .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(MeteorPublicationMock, collectionMock, {}, matcher);
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      { prop: 'match' },
+      matcher
+    );
 
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
 
@@ -702,7 +543,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.replaceOne(
+    await RootCollection.replaceOne(
       { _id: document._id },
       { prop: 'stillNonMatch' }
     );
@@ -718,26 +559,19 @@ describe('Link', () => {
   it('ignore unmatched document on remove', async () => {
     expect.assertions(2);
 
-    const db = mongoDB.db();
-
     const document = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const collectionMock = ({
-      rawCollection: jest.fn().mockImplementation(() => {
-        return db.collection(COLLECTION_NAME_ROOT);
-      }),
-      find: jest.fn().mockImplementation(() => {
-        return [];
-      }),
-    } as unknown) as Mongo.Collection<any>;
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      { prop: 'match' },
+      ({ prop }) => prop === 'match'
+    );
 
-    root = new Link(MeteorPublicationMock, collectionMock, {}, () => true);
-
-    const collection = mongoDB.db().collection(COLLECTION_NAME_ROOT);
-    await collection.insertOne(document);
+    await RootCollection.insertOne(document);
 
     root.observe();
 
@@ -745,7 +579,7 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await collection.deleteOne({ _id: document._id });
+    await RootCollection.deleteOne({ _id: document._id });
 
     // wait twice the time since we don't exactly know when the signaling has finished
     await sleep(DEFAULT_WAIT_IN_MS * 2);
