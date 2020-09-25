@@ -1,6 +1,4 @@
 import { Meteor } from 'meteor/meteor';
-// @ts-ignore
-import { Minimongo } from 'meteor/minimongo';
 
 import Link, { ChangeStreamRegistry } from 'meteor-streamed-joins';
 
@@ -13,8 +11,7 @@ Meteor.publish('threads', function threadsPublication() {
   console.log('threads publication started');
 
   const selector = {};
-  const matcher = new Minimongo.Matcher(selector)._docMatcher;
-  const root = new Link<ThreadDocument>(this, Threads, selector, matcher);
+  const root = new Link<ThreadDocument>(this, Threads, selector);
   root.link<Meteor.User>(Meteor.users, (doc) => doc?.userIds);
   root.observe();
 
