@@ -1,8 +1,9 @@
-// @ts-ignore
-import { Minimongo } from 'meteor/minimongo';
 import type { Mongo } from 'meteor/mongo';
 
 import type { MongoDoc, WithoutId } from './types';
+
+// @ts-ignore
+const Minimongo = global.Package?.minimongo?.Minimongo;
 
 export type Matcher<T extends MongoDoc = MongoDoc> = (
   doc: Partial<WithoutId<T>>
@@ -17,6 +18,7 @@ class DocumentMatcher<T extends MongoDoc = MongoDoc> {
 
   constructor(selector: Mongo.Selector<T>) {
     this.selector = selector;
+    // @ts-ignore
     this.matcher = new Minimongo.Matcher<T>(selector)._docMatcher;
     // Todo won't work with regex instances in selector
     this.id = JSON.stringify(this.selector);

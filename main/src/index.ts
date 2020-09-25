@@ -1,10 +1,13 @@
+/* istanbul ignore else */
 // @ts-ignore
-import { Minimongo } from 'meteor/minimongo';
+if (!global.Package?.minimongo?.Minimongo?.Matcher) {
+  throw Error('meteor/minimongo is missing');
+}
 
+// eslint-disable-next-line import/first
 import ChangeStreamRegistry from './changeStream/ChangeStreamRegistry';
+// eslint-disable-next-line import/first
 import Link from './Link';
-
-if (!Minimongo) throw Error('meteor/minimongo is missing');
 
 export { ChangeStreamRegistry };
 
