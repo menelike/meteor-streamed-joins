@@ -180,9 +180,6 @@ export class LinkChildSelector<
     queue.forEach((q) => {
       switch (q.type) {
         case 'parentAdded': {
-          // don't do anything if the parent has returned an equal matcher
-          if (this.queryResolver.has(q.payload.sourceId, q.payload.matcher))
-            break;
           this.queryResolver.add(q.payload.sourceId, q.payload.matcher);
           const keys = Object.values(this.queueDocs)
             .filter((doc) => q.payload.matcher.match(doc))
@@ -220,10 +217,7 @@ export class LinkChildSelector<
         }
         case 'changed': {
           const [matched, nonMatched] = this.queryResolver.match(q.payload.doc);
-          // if no matcher matches at all remove the child completely
-          if (!matched.length) {
-            this.publicationContext.removeChildFromRegistry(q.payload.id);
-          } else if (nonMatched.length) {
+          if (nonMatched.length) {
             // otherwise remove it for every sourceId which doesn't match
             // we don't care if the child is registered for that source
             // let the registry handle those cases
@@ -236,9 +230,6 @@ export class LinkChildSelector<
           matched.forEach((sourceId) => {
             this.publicationContext.addToRegistry(sourceId, [q.payload.id]);
           });
-
-          // if the child is not present at this step just ignore it
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
 
           this.publicationContext.changed(
             q.payload.id,
@@ -249,10 +240,7 @@ export class LinkChildSelector<
         }
         case 'replaced': {
           const [matched, nonMatched] = this.queryResolver.match(q.payload.doc);
-          // if no matcher matches at all remove the child completely
-          if (!matched.length) {
-            this.publicationContext.removeChildFromRegistry(q.payload.id);
-          } else if (nonMatched.length) {
+          if (nonMatched.length) {
             // otherwise remove it for every sourceId which doesn't match
             // we don't care if the child is registered for that source
             // let the registry handle those cases
@@ -265,9 +253,6 @@ export class LinkChildSelector<
           matched.forEach((sourceId) => {
             this.publicationContext.addToRegistry(sourceId, [q.payload.id]);
           });
-
-          // if the child is not present at this step just ignore it
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
 
           this.publicationContext.replaced(
             q.payload.id,

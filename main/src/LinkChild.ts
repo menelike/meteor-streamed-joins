@@ -141,13 +141,11 @@ export class LinkChild<
         case 'added': {
           if (!this.publicationContext.addedChildrenIds.has(q.payload.id))
             break;
-          // only add the dangling document when this instance is the primary
-          if (this.publicationContext.isPrimaryForChildId(q.payload.id)) {
-            this.publicationContext.added(
-              q.payload.id,
-              this.filterFields(q.payload.doc)
-            );
-          }
+
+          this.publicationContext.added(
+            q.payload.id,
+            this.filterFields(q.payload.doc)
+          );
           this.children.parentAdded(q.payload.id, q.payload.doc);
           break;
         }
