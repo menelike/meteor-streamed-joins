@@ -57,7 +57,7 @@ describe('Link', () => {
         }),
     };
 
-    root = new Link(publicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(publicationMock, RootCollectionMock, {});
     root.observe();
 
     const child = root.link(RootCollectionMock, () => undefined);
@@ -75,7 +75,7 @@ describe('Link', () => {
   it('resolves root from root', () => {
     expect.assertions(1);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     expect(root.root()).toBe(root);
   });
@@ -90,7 +90,7 @@ describe('Link', () => {
 
     await RootCollection.insertMany(rootDocuments);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     root.observe();
 
@@ -112,7 +112,7 @@ describe('Link', () => {
   it('calls added on document insert', async () => {
     expect.assertions(3);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const document = {
       _id: new ObjectID().toHexString(),
@@ -146,7 +146,7 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     await RootCollection.insertOne(document);
 
@@ -180,12 +180,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      ({ prop }) => prop === 'match'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     await RootCollection.insertOne(document);
 
@@ -220,12 +217,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      ({ prop }) => prop === 'match'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     await RootCollection.insertOne(document);
 
@@ -259,7 +253,7 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     await RootCollection.insertOne(document);
 
@@ -302,12 +296,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      ({ prop }) => prop === 'match'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     await RootCollection.insertOne(document);
 
@@ -342,12 +333,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      ({ prop }) => prop === 'match'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     await RootCollection.insertOne(document);
 
@@ -381,12 +369,9 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      ({ prop }) => prop === 'match'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     await RootCollection.insertOne(document);
 
@@ -422,9 +407,14 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true, {
-      fields: { prop: 1 },
-    });
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      {},
+      {
+        fields: { prop: 1 },
+      }
+    );
 
     root.observe();
 
@@ -452,17 +442,21 @@ describe('Link', () => {
   });
 
   it('ignore unmatched document on added', async () => {
-    expect.assertions(4);
+    expect.assertions(3);
 
-    const document = {
+    const documentA = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const matcher = jest
-      .fn()
-      .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, matcher);
+    const documentB = {
+      _id: new ObjectID().toHexString(),
+      prop: 'match',
+    };
+
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
 
     root.observe();
 
@@ -470,72 +464,85 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await RootCollection.insertOne(document);
+    await RootCollection.insertOne(documentA);
+    await RootCollection.insertOne(documentB);
 
-    await waitUntilHaveBeenCalledTimes(matcher, 1);
-    expect(matcher).toHaveBeenCalledTimes(1);
-    expect(matcher).toHaveBeenNthCalledWith(1, { prop: 'nonMatch' });
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      documentB._id,
+      { prop: documentB.prop }
+    );
   });
 
   it('ignore unmatched document on update', async () => {
-    expect.assertions(6);
+    expect.assertions(5);
 
-    const document = {
+    const documentA = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const matcher = jest
-      .fn()
-      .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      { prop: 'match' },
-      matcher
-    );
+    const documentB = {
+      _id: new ObjectID().toHexString(),
+      prop: 'nonMatch',
+    };
 
-    await RootCollection.insertOne(document);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+
+    await RootCollection.insertMany([documentA, documentB]);
 
     root.observe();
 
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.updateOne(
-      { _id: document._id },
+      { _id: documentA._id },
       { $set: { prop: 'stillNonMatch' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(matcher, 1);
-    expect(matcher).toHaveBeenCalledTimes(1);
-    expect(matcher).toHaveBeenNthCalledWith(1, { prop: 'stillNonMatch' });
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    await RootCollection.updateOne(
+      { _id: documentB._id },
+      { $set: { prop: 'match' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      documentB._id,
+      { prop: 'match' }
+    );
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('ignore unmatched document on replace', async () => {
-    expect.assertions(6);
+    expect.assertions(5);
 
-    const document = {
+    const documentA = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    const matcher = jest
-      .fn()
-      .mockImplementation(({ prop }) => prop === 'match');
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      { prop: 'match' },
-      matcher
-    );
+    const documentB = {
+      _id: new ObjectID().toHexString(),
+      prop: 'nonMatch',
+    };
 
-    await RootCollection.insertOne(document);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+
+    await RootCollection.insertMany([documentA, documentB]);
 
     root.observe();
 
@@ -544,34 +551,42 @@ describe('Link', () => {
     await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.replaceOne(
-      { _id: document._id },
+      { _id: documentA._id },
       { prop: 'stillNonMatch' }
     );
 
-    await waitUntilHaveBeenCalledTimes(matcher, 1);
-    expect(matcher).toHaveBeenCalledTimes(1);
-    expect(matcher).toHaveBeenNthCalledWith(1, { prop: 'stillNonMatch' });
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    await RootCollection.replaceOne({ _id: documentB._id }, { prop: 'match' });
+
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      documentB._id,
+      { prop: 'match' }
+    );
     expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('ignore unmatched document on remove', async () => {
-    expect.assertions(2);
+    expect.assertions(3);
 
-    const document = {
+    const documentA = {
       _id: new ObjectID().toHexString(),
       prop: 'nonMatch',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      { prop: 'match' },
-      ({ prop }) => prop === 'match'
-    );
+    const documentB = {
+      _id: new ObjectID().toHexString(),
+      prop: 'match',
+    };
 
-    await RootCollection.insertOne(document);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+
+    await RootCollection.insertMany([documentA, documentB]);
 
     root.observe();
 
@@ -579,10 +594,15 @@ describe('Link', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await RootCollection.deleteOne({ _id: document._id });
+    await RootCollection.deleteOne({ _id: documentA._id });
+    await RootCollection.deleteOne({ _id: documentB._id });
 
-    // wait twice the time since we don't exactly know when the signaling has finished
-    await sleep(DEFAULT_WAIT_IN_MS * 2);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      documentB._id
+    );
   });
 });

@@ -2,7 +2,7 @@ import type { Mongo } from 'meteor/mongo';
 
 import type { RootBaseOptions } from './base/RootBase';
 import { RootBase } from './base/RootBase';
-import type { Matcher } from './DocumentMatcher';
+import DocumentMatcher from './DocumentMatcher';
 import type { ExtractPrimaryKeys, LinkChildOptions } from './LinkChild';
 import { LinkChild } from './LinkChild';
 import type {
@@ -13,14 +13,13 @@ import { LinkChildSelector } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
 import type { MongoDoc, WithoutId } from './types';
 
-type Options<T extends MongoDoc = MongoDoc> = {
-  matcher?: Matcher<T>;
+type Options = {
   fields?: RootBaseOptions['fields'];
   skipPublication?: boolean;
 };
 
 class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
-  private readonly matcher: Matcher<T>;
+  private readonly matcher: DocumentMatcher<T>;
 
   private readonly selector: Mongo.Selector<T>;
 
@@ -30,16 +29,15 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     context: MeteorPublicationContext<T>,
     collection: Mongo.Collection<T>,
     selector: Mongo.Selector<T>,
-    matcher: Matcher<T>,
-    options?: Options<T>
+    options?: Options
   ) {
     super(context, collection, { fields: options?.fields });
     this.selector = selector;
-    this.matcher = matcher;
+    this.matcher = new DocumentMatcher<T>(selector);
   }
 
   private added = (_id: string, doc: WithoutId<T>): void => {
-    if (!this.matcher(doc)) return;
+    if (!this.matcher.match(doc)) return;
     this.publicationContext.addToRegistry(_id, [_id]);
     this.publicationContext.added(_id, this.filterFields(doc));
     this.children.parentAdded(_id, doc);
@@ -52,7 +50,7 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     doc: T
   ): void => {
     const hasForeignKey = this.publicationContext.hasChildId(_id);
-    const match = this.matcher(doc);
+    const match = this.matcher.match(doc);
 
     if (match && !hasForeignKey) {
       this.added(_id, doc);
@@ -71,7 +69,7 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
 
   private replaced = (_id: string, doc: T): void => {
     const hasForeignKey = this.publicationContext.hasChildId(_id);
-    const match = this.matcher(doc);
+    const match = this.matcher.match(doc);
 
     if (match && !hasForeignKey) {
       this.added(_id, doc);

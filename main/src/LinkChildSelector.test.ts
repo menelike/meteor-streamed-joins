@@ -87,7 +87,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -146,7 +146,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
     const childResolver = jest
       .fn()
       .mockImplementation((doc) => ({ group: doc.group }));
@@ -197,7 +197,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -249,7 +249,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -306,7 +306,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -363,7 +363,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -407,7 +407,7 @@ describe('LinkChildSelector', () => {
       group: 'B',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -447,7 +447,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -503,7 +503,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -541,7 +541,7 @@ describe('LinkChildSelector', () => {
   it('resolves root from children', () => {
     expect.assertions(2);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     child = root.select(ChildCollectionMock, () => undefined);
 
@@ -566,7 +566,7 @@ describe('LinkChildSelector', () => {
     ];
     await ChildCollection.insertMany(childDocuments);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -620,7 +620,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -664,7 +664,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -706,7 +706,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -755,7 +755,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -799,7 +799,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -857,7 +857,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertMany([childDocumentA, childDocumentB]);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -906,7 +906,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertMany([childDocumentA, childDocumentB]);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -945,7 +945,7 @@ describe('LinkChildSelector', () => {
     const rootDocument = { _id: new ObjectID().toHexString(), group: 'A' };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.select(ChildCollectionMock, childResolver);
@@ -969,7 +969,7 @@ describe('LinkChildSelector', () => {
 
     const childDocument = { _id: new ObjectID().toHexString() };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.select(ChildCollectionMock, childResolver);
@@ -1003,7 +1003,7 @@ describe('LinkChildSelector', () => {
     const childDocument = { _id: new ObjectID().toHexString() };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.select(ChildCollectionMock, childResolver);
@@ -1050,12 +1050,7 @@ describe('LinkChildSelector', () => {
       groups: [rootDocumentA.group, rootDocumentB.group, rootDocumentC.group],
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      { group: 'A' },
-      (doc) => doc.group === 'A'
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, { group: 'A' });
 
     const childResolver = jest
       .fn()
@@ -1153,12 +1148,9 @@ describe('LinkChildSelector', () => {
       group: 'A',
     };
 
-    root = new Link(
-      MeteorPublicationMock,
-      RootCollectionMock,
-      {},
-      (doc) => !!doc.group
-    );
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+      group: { $exists: true },
+    });
 
     const childResolver = jest
       .fn()
@@ -1178,7 +1170,9 @@ describe('LinkChildSelector', () => {
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
 
     expect(RootCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {});
+    expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      group: { $exists: true },
+    });
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(1);
     expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
@@ -1249,7 +1243,7 @@ describe('LinkChildSelector', () => {
       groups: [childDocumentA.group, childDocumentB.group],
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -1343,7 +1337,7 @@ describe('LinkChildSelector', () => {
       prop: 'root',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -1457,7 +1451,7 @@ describe('LinkChildSelector', () => {
     };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -1500,7 +1494,7 @@ describe('LinkChildSelector', () => {
     };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -1573,7 +1567,7 @@ describe('LinkChildSelector', () => {
     await ChildCollection.insertOne(childDocument);
     await ChildCollection.insertOne(unrelatedChildDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
@@ -1618,7 +1612,7 @@ describe('LinkChildSelector', () => {
     };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
+    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest
       .fn()
