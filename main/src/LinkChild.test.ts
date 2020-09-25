@@ -143,6 +143,70 @@ describe('LinkChild', () => {
     );
   });
 
+  it('skips publication', async () => {
+    expect.assertions(5);
+
+    const childDocument = { _id: new ObjectID().toHexString(), prop: 'A' };
+    await ChildCollection.insertOne(childDocument);
+
+    const rootDocument = {
+      _id: new ObjectID().toHexString(),
+      child: childDocument._id,
+    };
+    await RootCollection.insertOne(rootDocument);
+
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      {},
+      { skipPublication: false }
+    );
+
+    const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
+    child = root.link(ChildCollectionMock, childResolver, {
+      skipPublication: false,
+    });
+
+    root.observe();
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { child: childDocument._id }
+    );
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      2,
+      COLLECTION_NAME_CHILD,
+      childDocument._id,
+      { prop: 'A' }
+    );
+
+    await root.stop();
+    await child.stop();
+
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      {},
+      { skipPublication: false }
+    );
+
+    child = root.link(ChildCollectionMock, childResolver, {
+      skipPublication: true,
+    });
+
+    root.observe();
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+      3,
+      COLLECTION_NAME_ROOT,
+      rootDocument._id,
+      { child: childDocument._id }
+    );
+  });
+
   it('calls removed on root document remove', async () => {
     expect.assertions(3);
 

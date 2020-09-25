@@ -109,6 +109,36 @@ describe('Link', () => {
     );
   });
 
+  it('skips publication', async () => {
+    expect.assertions(2);
+
+    await RootCollection.insertOne({ _id: new ObjectID().toHexString() });
+
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      {},
+      { skipPublication: true }
+    );
+
+    root.observe();
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+
+    await root.stop();
+
+    root = new Link(
+      MeteorPublicationMock,
+      RootCollectionMock,
+      {},
+      { skipPublication: false }
+    );
+
+    root.observe();
+
+    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+  });
+
   it('calls added on document insert', async () => {
     expect.assertions(3);
 
