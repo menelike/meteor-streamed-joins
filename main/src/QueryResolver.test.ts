@@ -9,14 +9,14 @@ describe('QueryResolver', () => {
 
   it('adds a matcher', () => {
     const resolver = new QueryResolver();
-    const matcher = new DocumentMatcher({}, jest.fn());
+    const matcher = new DocumentMatcher({});
     resolver.add('testId', matcher);
     expect(resolver.has('testId', matcher)).toBeTruthy();
   });
 
   it('deletes a matcher', () => {
     const resolver = new QueryResolver();
-    const matcher = new DocumentMatcher({}, jest.fn());
+    const matcher = new DocumentMatcher({});
     resolver.add('testId', matcher);
     expect(resolver.has('testId', matcher)).toBeTruthy();
     resolver.delete('testId');
@@ -25,9 +25,9 @@ describe('QueryResolver', () => {
 
   it('has a matcher', () => {
     const resolver = new QueryResolver();
-    const matcher = new DocumentMatcher({ foo: 'bar' }, jest.fn());
-    const sameMatcher = new DocumentMatcher({ foo: 'bar' }, jest.fn());
-    const differentMatcher = new DocumentMatcher({ foo: 'not bar' }, jest.fn());
+    const matcher = new DocumentMatcher({ foo: 'bar' });
+    const sameMatcher = new DocumentMatcher({ foo: 'bar' });
+    const differentMatcher = new DocumentMatcher({ foo: 'not bar' });
     resolver.add('testId', matcher);
     expect(resolver.has('testId', matcher)).toBeTruthy();
     expect(resolver.has('testId', sameMatcher)).toBeTruthy();
@@ -37,28 +37,25 @@ describe('QueryResolver', () => {
 
   it('document matches at least once', () => {
     const resolver = new QueryResolver();
-    const matcher = new DocumentMatcher({}, () => false);
-    let otherMatcher = new DocumentMatcher({}, () => false);
+    const matcher = new DocumentMatcher({ dont: 'match' });
+    const otherMatcher = new DocumentMatcher({ do: 'match' });
     resolver.add('a', matcher);
     resolver.add('b', otherMatcher);
-    expect(resolver.some({})).toBeFalsy();
-    otherMatcher = new DocumentMatcher({}, () => true);
-    resolver.add('a', matcher);
-    resolver.add('b', otherMatcher);
-    expect(resolver.some({})).toBeTruthy();
+    expect(resolver.some({ no: 'match' })).toBeFalsy();
+    expect(resolver.some({ do: 'match' })).toBeTruthy();
   });
 
   it('gets a list of matched and non-matched matcher', () => {
     const resolver = new QueryResolver();
-    const matcherA = new DocumentMatcher({}, () => true);
-    const matcherB = new DocumentMatcher({}, () => false);
-    const matcherC = new DocumentMatcher({}, () => true);
-    const matcherD = new DocumentMatcher({}, () => false);
+    const matcherA = new DocumentMatcher({ a: 'exists' });
+    const matcherB = new DocumentMatcher({ b: 'exists' });
+    const matcherC = new DocumentMatcher({ c: 'exists' });
+    const matcherD = new DocumentMatcher({ d: 'exists' });
     resolver.add('a', matcherA);
     resolver.add('b', matcherB);
     resolver.add('c', matcherC);
     resolver.add('d', matcherD);
-    expect(resolver.match({})).toEqual([
+    expect(resolver.match({ a: 'exists', c: 'exists' })).toEqual([
       ['a', 'c'],
       ['b', 'd'],
     ]);

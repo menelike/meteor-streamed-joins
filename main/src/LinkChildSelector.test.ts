@@ -93,12 +93,7 @@ describe('LinkChildSelector', () => {
     const childResolver = jest
       .fn()
       .mockImplementation((doc) =>
-        doc.group
-          ? new DocumentMatcher(
-              { group: doc.group },
-              (d) => d.group === doc.group
-            )
-          : undefined
+        doc.group ? new DocumentMatcher({ group: doc.group }) : undefined
       );
 
     child = root.select(ChildCollectionMock, childResolver);
@@ -155,13 +150,7 @@ describe('LinkChildSelector', () => {
     root = new Link(MeteorPublicationMock, RootCollectionMock, {}, () => true);
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -213,13 +202,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -271,13 +254,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -334,13 +311,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -397,13 +368,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -447,13 +412,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -493,12 +452,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher({ groups: doc.group }, (d) =>
-            d.groups.includes(doc.group)
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ groups: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -554,12 +508,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher({ groups: doc.group }, (d) =>
-            d.groups.includes(doc.group)
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ groups: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -622,13 +571,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     root.observe();
@@ -682,13 +625,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child = root.select(ChildCollectionMock, childResolver);
 
@@ -732,13 +669,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     root.observe();
@@ -780,13 +711,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     root.observe();
@@ -835,13 +760,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
@@ -885,13 +804,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
@@ -949,13 +862,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
@@ -1004,13 +911,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver, {
       fields: { prop: 1 },
     });
@@ -1159,20 +1060,12 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher({ groups: doc.group }, (d) =>
-            d.groups.includes(doc.group)
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ groups: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
     const rootResolver = jest
       .fn()
       .mockImplementation(
-        (doc) =>
-          new DocumentMatcher({ group: { $in: doc.groups } }, (d) =>
-            doc.groups.includes(d.group)
-          )
+        (doc) => new DocumentMatcher({ group: { $in: doc.groups } })
       );
     child.select(RootCollectionMock, rootResolver);
 
@@ -1272,13 +1165,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     await ChildCollection.insertMany([childDocumentA, childDocumentB]);
@@ -1369,22 +1256,13 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => doc.group === d.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     const childrenResolver = jest
       .fn()
       .mockImplementation(
-        (doc) =>
-          new DocumentMatcher({ group: { $in: doc.groups } }, (d) =>
-            doc.groups.includes(d.group)
-          )
+        (doc) => new DocumentMatcher({ group: { $in: doc.groups } })
       );
     const children = root.select(ChildCollectionMock, childrenResolver);
 
@@ -1474,34 +1352,20 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     const grandChildResolver = jest
       .fn()
       .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.grandGroup },
-            (d) => d.group === doc.grandGroup
-          )
+        (doc) => new DocumentMatcher({ group: doc.grandGroup })
       );
     grandChild = root.select(GrandChildCollectionMock, grandChildResolver);
 
     const childToGrandChildResolver = jest
       .fn()
       .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.grandGroup },
-            (d) => d.group === doc.grandGroup
-          )
+        (doc) => new DocumentMatcher({ group: doc.grandGroup })
       );
     const childToGrandChild = child.select(
       GrandChildCollectionMock,
@@ -1606,13 +1470,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     // wait some time otherwise observer fires an insert
@@ -1655,13 +1513,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
     grandChild = root.select(ChildCollectionMock, childResolver);
 
@@ -1734,13 +1586,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     // wait some time otherwise observer fires an insert
@@ -1785,13 +1631,7 @@ describe('LinkChildSelector', () => {
 
     const childResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
     child = root.select(ChildCollectionMock, childResolver);
 
     child.link(GrandChildCollectionMock, (doc) => [doc.child]);

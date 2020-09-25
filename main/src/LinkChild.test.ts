@@ -1135,13 +1135,7 @@ describe('LinkChild', () => {
 
     const grandChildResolver = jest
       .fn()
-      .mockImplementation(
-        (doc) =>
-          new DocumentMatcher(
-            { group: doc.group },
-            (d) => d.group === doc.group
-          )
-      );
+      .mockImplementation((doc) => new DocumentMatcher({ group: doc.group }));
 
     child.select(GrandChildCollectionMock, grandChildResolver);
 
