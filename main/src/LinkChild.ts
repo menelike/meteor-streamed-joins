@@ -16,14 +16,14 @@ export type LinkChildOptions = {
 };
 
 export type ExtractPrimaryKeys<P extends MongoDoc = MongoDoc> = (
-  document: Partial<WithoutId<P>>
+  document: WithoutId<P>
 ) => string[] | undefined;
 
 type ParentAdded<T extends MongoDoc = MongoDoc> = {
   type: 'parentAdded';
   payload: {
     sourceId: string;
-    doc: Partial<WithoutId<T>>;
+    doc: WithoutId<T>;
   };
 };
 
@@ -181,7 +181,7 @@ export class LinkChild<
 
   /** @internal */
   public flush(): void {
-    const added: Array<{ _id: string } & Partial<WithoutId<T>>> = [];
+    const added: Array<T> = [];
     const removed: Array<string> = [];
     if (this.publicationContext.addedChildrenIds.size) {
       this.collection
@@ -189,13 +189,12 @@ export class LinkChild<
           // @ts-ignore
           {
             _id: { $in: [...this.publicationContext.addedChildrenIds] },
-          },
-          { fields: this.fields }
+          }
         )
         .forEach((document) => {
           const { _id, ...doc } = document;
           added.push(document);
-          this.publicationContext.added(_id, doc);
+          this.publicationContext.added(_id, this.filterFields(doc));
         });
     }
     if (this.publicationContext.removedChildrenIds.size) {
@@ -206,7 +205,7 @@ export class LinkChild<
     }
 
     added.forEach(({ _id, ...doc }) => {
-      this.children.parentAdded(_id, doc as Partial<WithoutId<T>>);
+      this.children.parentAdded(_id, doc);
     });
 
     removed.forEach((_id) => {
@@ -218,7 +217,7 @@ export class LinkChild<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: Partial<WithoutId<P>>): void => {
+  public parentAdded = (sourceId: string, doc: WithoutId<P>): void => {
     this.queue.push({
       type: 'parentAdded',
       payload: { sourceId, doc },

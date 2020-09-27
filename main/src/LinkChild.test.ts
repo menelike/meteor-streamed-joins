@@ -669,22 +669,14 @@ describe('LinkChild', () => {
     expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
       child: { $exists: true },
     });
-    expect(RootCollectionMock.find).toHaveBeenNthCalledWith(
-      2,
-      {
-        _id: { $in: [rootDocumentB._id, rootDocumentC._id] },
-      },
-      { fields: undefined }
-    );
+    expect(RootCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      _id: { $in: [rootDocumentB._id, rootDocumentC._id] },
+    });
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      _id: { $in: [childDocument._id] },
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
@@ -764,13 +756,9 @@ describe('LinkChild', () => {
     });
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocumentA._id] },
-      },
-      { fields: undefined }
-    );
+    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      _id: { $in: [childDocumentA._id] },
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
@@ -800,13 +788,9 @@ describe('LinkChild', () => {
     await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(2);
-    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(
-      2,
-      {
-        _id: { $in: [childDocumentB._id] },
-      },
-      { fields: undefined }
-    );
+    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(2, {
+      _id: { $in: [childDocumentB._id] },
+    });
 
     expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
@@ -870,13 +854,9 @@ describe('LinkChild', () => {
     });
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocumentA._id, childDocumentB._id] },
-      },
-      { fields: undefined }
-    );
+    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      _id: { $in: [childDocumentA._id, childDocumentB._id] },
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {
@@ -972,22 +952,14 @@ describe('LinkChild', () => {
     });
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [childDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      _id: { $in: [childDocument._id] },
+    });
 
     expect(GrandChildCollectionMock.find).toHaveBeenCalledTimes(1);
-    expect(GrandChildCollectionMock.find).toHaveBeenNthCalledWith(
-      1,
-      {
-        _id: { $in: [grandChildDocument._id] },
-      },
-      { fields: undefined }
-    );
+    expect(GrandChildCollectionMock.find).toHaveBeenNthCalledWith(1, {
+      _id: { $in: [grandChildDocument._id] },
+    });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, {

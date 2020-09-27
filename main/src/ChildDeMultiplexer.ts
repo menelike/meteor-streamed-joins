@@ -14,10 +14,7 @@ class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
     this.children.add(linkChild);
   };
 
-  public parentAdded = (
-    parentId: string,
-    parentDoc: Partial<WithoutId<P>>
-  ): void => {
+  public parentAdded = (parentId: string, parentDoc: WithoutId<P>): void => {
     this.children.forEach((child) => {
       child.parentAdded(parentId, parentDoc);
     });

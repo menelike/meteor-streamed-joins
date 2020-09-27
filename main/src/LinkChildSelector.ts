@@ -17,7 +17,7 @@ export type LinkChildSelectorOptions = {
 export type ExtractSelector<
   P extends MongoDoc = MongoDoc,
   T extends MongoDoc = MongoDoc
-> = (document: Partial<WithoutId<P>>) => Mongo.Selector<T> | undefined;
+> = (document: WithoutId<P>) => Mongo.Selector<T> | undefined;
 
 type ParentAdded<
   P extends MongoDoc = MongoDoc,
@@ -26,7 +26,7 @@ type ParentAdded<
   type: 'parentAdded';
   payload: {
     sourceId: string;
-    doc: Partial<WithoutId<P>>;
+    doc: WithoutId<P>;
     matcher: DocumentMatcher<T>;
   };
 };
@@ -278,14 +278,14 @@ export class LinkChildSelector<
     const { queueDocs } = this;
     this.queueDocs = {};
 
-    const added: Array<{ _id: string } & Partial<WithoutId<T>>> = [];
+    const added: Array<T> = [];
     const removed: Array<string> = [];
     if (this.publicationContext.addedChildrenIds.size) {
       Object.values(queueDocs).forEach((document) => {
         const { _id, ...doc } = document;
         const docFields = this.filterFields(doc);
         if (!this.publicationContext.addedChildrenIds.has(_id)) return;
-        added.push({ _id, ...docFields });
+        added.push(document);
         // only add the dangling document when this instance is the primary
         if (this.publicationContext.isPrimaryForChildId(_id)) {
           this.publicationContext.added(_id, docFields);
@@ -300,7 +300,7 @@ export class LinkChildSelector<
     }
 
     added.forEach(({ _id, ...doc }) => {
-      this.children.parentAdded(_id, doc as Partial<WithoutId<T>>);
+      this.children.parentAdded(_id, doc);
     });
 
     removed.forEach((_id) => {
@@ -312,7 +312,7 @@ export class LinkChildSelector<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: Partial<WithoutId<P>>): void => {
+  public parentAdded = (sourceId: string, doc: WithoutId<P>): void => {
     const selector = this.resolver(doc);
 
     if (selector) {
