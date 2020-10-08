@@ -30,7 +30,7 @@ describe('ChildDeMultiplexer', () => {
 
     const deMultiplexer = new ChildDeMultiplexer();
     deMultiplexer.link(linkChildMock);
-    const doc = {};
+    const doc = { _id: 'parentId' };
     deMultiplexer.parentAdded('parentId', doc);
     expect(linkChildMock.parentAdded).toHaveBeenCalledTimes(1);
     expect(linkChildMock.parentAdded).toHaveBeenNthCalledWith(
@@ -45,7 +45,7 @@ describe('ChildDeMultiplexer', () => {
 
     const deMultiplexer = new ChildDeMultiplexer();
     deMultiplexer.link(linkChildMock);
-    const doc = {};
+    const doc = { _id: 'parentId' };
     deMultiplexer.parentChanged('parentId', doc);
     expect(linkChildMock.parentChanged).toHaveBeenCalledTimes(1);
     expect(linkChildMock.parentChanged).toHaveBeenNthCalledWith(

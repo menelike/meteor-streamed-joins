@@ -140,12 +140,7 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.added).toHaveBeenNthCalledWith(
       1,
       document._id,
-      {
-        name: 'foo',
-        nested: {
-          bar: 'test',
-        },
-      },
+      document,
       expect.objectContaining({
         operationType: 'insert',
         ns: { db: 'undefined', coll: 'test' },
@@ -190,6 +185,7 @@ describe('ChangeStreamMultiplexer', () => {
         },
       },
       {
+        _id: document._id,
         name: 'changedFoo',
         nested: {
           bar: 'changedTest',
@@ -237,6 +233,7 @@ describe('ChangeStreamMultiplexer', () => {
       1,
       document._id,
       {
+        _id: document._id,
         name: 'changedFoo',
         nested: { bar: 'changed' },
       },
@@ -321,6 +318,7 @@ describe('ChangeStreamMultiplexer', () => {
         toRemove: undefined,
       },
       {
+        _id: document._id,
         name: 'changedFoo',
         nested: {
           bar: 'test',
@@ -372,6 +370,7 @@ describe('ChangeStreamMultiplexer', () => {
       1,
       document._id,
       {
+        _id: document._id,
         name: 'changedFoo',
       },
       expect.objectContaining({

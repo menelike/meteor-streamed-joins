@@ -35,10 +35,13 @@ export class LinkCommon<T extends MongoDoc = MongoDoc> {
     this.fields = options?.fields;
   }
 
-  public filterFields = (doc: Partial<WithoutId<T>>): Partial<WithoutId<T>> => {
-    if (this.fields) return filterFields(this.fields, doc);
+  public filterFields = (
+    doc: Partial<T> | Partial<WithoutId<T>>
+  ): Partial<WithoutId<T>> => {
+    let nextDoc = doc;
+    if (this.fields) nextDoc = filterFields(this.fields, doc);
 
-    return doc;
+    return filterFields({ _id: -1 }, nextDoc);
   };
 
   /** @internal */

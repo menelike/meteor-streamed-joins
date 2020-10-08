@@ -16,14 +16,14 @@ export type LinkChildOptions = {
 };
 
 export type ExtractPrimaryKeys<P extends MongoDoc = MongoDoc> = (
-  document: WithoutId<P>
+  document: P
 ) => string[] | undefined;
 
 type ParentAdded<T extends MongoDoc = MongoDoc> = {
   type: 'parentAdded';
   payload: {
     sourceId: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -31,7 +31,7 @@ type ParentChanged<T extends MongoDoc = MongoDoc> = {
   type: 'parentChanged';
   payload: {
     sourceId: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -46,7 +46,7 @@ type Added<T extends MongoDoc = MongoDoc> = {
   type: 'added';
   payload: {
     id: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -55,7 +55,7 @@ type Changed<T extends MongoDoc = MongoDoc> = {
   payload: {
     id: string;
     fields: Partial<WithoutId<T>>;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -63,7 +63,7 @@ type Replaced<T extends MongoDoc = MongoDoc> = {
   type: 'replaced';
   payload: {
     id: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -204,8 +204,8 @@ export class LinkChild<
       });
     }
 
-    added.forEach(({ _id, ...doc }) => {
-      this.children.parentAdded(_id, doc);
+    added.forEach((doc) => {
+      this.children.parentAdded(doc._id, doc);
     });
 
     removed.forEach((_id) => {
@@ -217,7 +217,7 @@ export class LinkChild<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: WithoutId<P>): void => {
+  public parentAdded = (sourceId: string, doc: P): void => {
     this.queue.push({
       type: 'parentAdded',
       payload: { sourceId, doc },
@@ -226,7 +226,7 @@ export class LinkChild<
 
   // handle change from parent
   /** @internal */
-  public parentChanged = (sourceId: string, doc: WithoutId<P>): void => {
+  public parentChanged = (sourceId: string, doc: P): void => {
     this.queue.push({
       type: 'parentChanged',
       payload: { sourceId, doc },
@@ -248,7 +248,7 @@ export class LinkChild<
   // this is only used in cases where a linked document has been inserted
   // after the related document e.g. the insertion order/foreign key
   // relationship has been broken
-  private added = (id: string, doc: WithoutId<T>): void => {
+  private added = (id: string, doc: T): void => {
     this.queue.push({
       type: 'added',
       payload: {
@@ -264,7 +264,7 @@ export class LinkChild<
   private changed = (
     id: string,
     fields: Partial<WithoutId<T>>,
-    doc: WithoutId<T>
+    doc: T
   ): void => {
     this.queue.push({
       type: 'changed',
@@ -279,7 +279,7 @@ export class LinkChild<
   };
 
   // handle replace events from change streams
-  private replaced = (id: string, doc: WithoutId<T>): void => {
+  private replaced = (id: string, doc: T): void => {
     this.queue.push({
       type: 'replaced',
       payload: {

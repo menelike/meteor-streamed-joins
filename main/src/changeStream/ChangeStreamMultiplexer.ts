@@ -95,11 +95,7 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
-  private onInserted = (
-    _id: string,
-    fields: Partial<WithoutId<T>>,
-    op: ChangeEventCR<T>
-  ): void => {
+  private onInserted = (_id: string, fields: T, op: ChangeEventCR<T>): void => {
     this.listeners.forEach((listener) => {
       listener.added(_id, fields, op);
     });
@@ -108,7 +104,7 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
   private onChanged = (
     _id: string,
     fields: Partial<WithoutId<T>>,
-    doc: WithoutId<T>,
+    doc: T,
     op: ChangeEventUpdate<T>
   ): void => {
     this.listeners.forEach((listener) => {
@@ -116,11 +112,7 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     });
   };
 
-  private onReplaced = (
-    _id: string,
-    doc: WithoutId<T>,
-    op: ChangeEventCR<T>
-  ): void => {
+  private onReplaced = (_id: string, doc: T, op: ChangeEventCR<T>): void => {
     this.listeners.forEach((listener) => {
       listener.replaced(_id, doc, op);
     });
@@ -142,31 +134,24 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
         fields[f] = undefined;
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _id: unused, ...fullDocument } = next.fullDocument;
-
       this.onChanged(
         _id,
         EJSON.parse(JSON.stringify(convertDottedToObject<Partial<T>>(fields))),
         EJSON.parse(
-          JSON.stringify(convertDottedToObject<Partial<T>>(fullDocument))
+          JSON.stringify(convertDottedToObject<T>(next.fullDocument))
         ),
         next
       );
     } else if (next.operationType === 'replace') {
       const { fullDocument } = next;
       if (fullDocument) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _id: unused, ...fields } = fullDocument;
-        this.onReplaced(_id, EJSON.parse(JSON.stringify(fields)), next);
+        this.onReplaced(_id, EJSON.parse(JSON.stringify(fullDocument)), next);
       } else {
         throw Error('received replace OP without a full document');
       }
     } else if (next.operationType === 'insert') {
       const { fullDocument } = next;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { _id: unused, ...doc } = fullDocument;
-      this.onInserted(_id, EJSON.parse(JSON.stringify(doc)), next);
+      this.onInserted(_id, EJSON.parse(JSON.stringify(fullDocument)), next);
     } else if (next.operationType === 'delete') {
       this.onRemoved(_id, next);
     }

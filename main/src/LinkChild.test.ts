@@ -109,12 +109,8 @@ describe('LinkChild', () => {
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(2);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: childDocuments[0]._id,
-    });
-    expect(childResolver).toHaveBeenNthCalledWith(2, {
-      child: childDocuments[1]._id,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocuments[0]);
+    expect(childResolver).toHaveBeenNthCalledWith(2, rootDocuments[1]);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -548,7 +544,7 @@ describe('LinkChild', () => {
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, { unknownProp: 'childA' });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -585,7 +581,7 @@ describe('LinkChild', () => {
     expect(child.added).toHaveBeenNthCalledWith(
       1,
       childDocument._id,
-      {},
+      childDocument,
       expect.anything()
     );
 
@@ -679,14 +675,10 @@ describe('LinkChild', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(rootResolver).toHaveBeenCalledTimes(1);
-    expect(rootResolver).toHaveBeenNthCalledWith(1, {
-      roots: [rootDocumentB._id, rootDocumentC._id, rootDocumentA._id],
-    });
+    expect(rootResolver).toHaveBeenNthCalledWith(1, childDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -761,9 +753,7 @@ describe('LinkChild', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -859,16 +849,10 @@ describe('LinkChild', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-      children: [childDocumentA._id, childDocumentB._id],
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(childrenResolver).toHaveBeenCalledTimes(1);
-    expect(childrenResolver).toHaveBeenNthCalledWith(1, {
-      child: rootDocumentA.child,
-      children: [childDocumentA._id, childDocumentB._id],
-    });
+    expect(childrenResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -962,21 +946,13 @@ describe('LinkChild', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      child: childDocument._id,
-      grandChild: grandChildDocument._id,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(grandChildResolver).toHaveBeenCalledTimes(1);
-    expect(grandChildResolver).toHaveBeenNthCalledWith(1, {
-      child: childDocument._id,
-      grandChild: grandChildDocument._id,
-    });
+    expect(grandChildResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(childToGrandChildResolver).toHaveBeenCalledTimes(1);
-    expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, {
-      grandChild: grandChildDocument._id,
-    });
+    expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, childDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(

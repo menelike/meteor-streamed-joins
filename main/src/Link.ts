@@ -39,7 +39,7 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     this.matcher = new DocumentMatcher<T>(selector);
   }
 
-  private added = (_id: string, doc: WithoutId<T>): void => {
+  private added = (_id: string, doc: T): void => {
     if (!this.matcher.match(doc)) return;
     this.publicationContext.addToRegistry(_id, [_id]);
     this.publicationContext.added(_id, this.filterFields(doc));
@@ -98,8 +98,8 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
   };
 
   public observe(): void {
-    this.collection.find(this.selector).forEach(({ _id, ...doc }) => {
-      this.added(_id, doc);
+    this.collection.find(this.selector).forEach((doc) => {
+      this.added(doc._id, doc);
     });
     this.firstRun = false;
     this.children.commit();

@@ -1,12 +1,12 @@
 import type { Mongo } from 'meteor/mongo';
 
-import type { MongoDoc, WithoutId } from './types';
+import type { MongoDoc } from './types';
 
 // @ts-ignore
 const Minimongo = global.Package?.minimongo?.Minimongo;
 
 export type Matcher<T extends MongoDoc = MongoDoc> = (
-  doc: Partial<WithoutId<T>>
+  doc: Partial<T>
 ) => boolean;
 
 class DocumentMatcher<T extends MongoDoc = MongoDoc> {
@@ -24,7 +24,7 @@ class DocumentMatcher<T extends MongoDoc = MongoDoc> {
     this.id = JSON.stringify(this.selector);
   }
 
-  public match(doc: Partial<WithoutId<T>>): boolean {
+  public match(doc: Partial<T>): boolean {
     return this.matcher(doc);
   }
 

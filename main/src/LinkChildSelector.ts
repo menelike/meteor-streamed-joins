@@ -17,7 +17,7 @@ export type LinkChildSelectorOptions = {
 export type ExtractSelector<
   P extends MongoDoc = MongoDoc,
   T extends MongoDoc = MongoDoc
-> = (document: WithoutId<P>) => Mongo.Selector<T> | undefined;
+> = (document: P) => Mongo.Selector<T> | undefined;
 
 type ParentAdded<
   P extends MongoDoc = MongoDoc,
@@ -26,7 +26,7 @@ type ParentAdded<
   type: 'parentAdded';
   payload: {
     sourceId: string;
-    doc: WithoutId<P>;
+    doc: P;
     matcher: DocumentMatcher<T>;
   };
 };
@@ -38,7 +38,7 @@ type ParentChanged<
   type: 'parentChanged';
   payload: {
     sourceId: string;
-    doc: WithoutId<P>;
+    doc: P;
     matcher: DocumentMatcher<T>;
   };
 };
@@ -54,7 +54,7 @@ type Added<T extends MongoDoc = MongoDoc> = {
   type: 'added';
   payload: {
     id: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -63,7 +63,7 @@ type Changed<T extends MongoDoc = MongoDoc> = {
   payload: {
     id: string;
     fields: Partial<WithoutId<T>>;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -71,7 +71,7 @@ type Replaced<T extends MongoDoc = MongoDoc> = {
   type: 'replaced';
   payload: {
     id: string;
-    doc: WithoutId<T>;
+    doc: T;
   };
 };
 
@@ -149,10 +149,7 @@ export class LinkChildSelector<
         case 'added':
         case 'changed':
         case 'replaced': {
-          this.queueDocs[q.payload.id] = {
-            _id: q.payload.id,
-            ...q.payload.doc,
-          } as T;
+          this.queueDocs[q.payload.id] = q.payload.doc;
           break;
         }
         case 'removed': {
@@ -299,8 +296,8 @@ export class LinkChildSelector<
       });
     }
 
-    added.forEach(({ _id, ...doc }) => {
-      this.children.parentAdded(_id, doc);
+    added.forEach((doc) => {
+      this.children.parentAdded(doc._id, doc);
     });
 
     removed.forEach((_id) => {
@@ -312,7 +309,7 @@ export class LinkChildSelector<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: WithoutId<P>): void => {
+  public parentAdded = (sourceId: string, doc: P): void => {
     const selector = this.resolver(doc);
 
     if (selector) {
@@ -328,7 +325,7 @@ export class LinkChildSelector<
 
   // handle change from parent
   /** @internal */
-  public parentChanged = (sourceId: string, doc: WithoutId<P>): void => {
+  public parentChanged = (sourceId: string, doc: P): void => {
     const selector = this.resolver(doc);
 
     if (selector) {
@@ -353,7 +350,7 @@ export class LinkChildSelector<
     });
   };
 
-  private added = (id: string, doc: WithoutId<T>): void => {
+  private added = (id: string, doc: T): void => {
     this.queue.push({
       type: 'added',
       payload: {
@@ -369,7 +366,7 @@ export class LinkChildSelector<
   private changed = (
     id: string,
     fields: Partial<WithoutId<T>>,
-    doc: WithoutId<T>
+    doc: T
   ): void => {
     const hasForeignKey = this.publicationContext.hasChildId(id);
     const match = this.queryResolver.some(doc);
@@ -403,7 +400,7 @@ export class LinkChildSelector<
   };
 
   // handle replace events from change streams
-  private replaced = (id: string, doc: WithoutId<T>): void => {
+  private replaced = (id: string, doc: T): void => {
     const hasForeignKey = this.publicationContext.hasChildId(id);
     const match = this.queryResolver.some(doc);
 

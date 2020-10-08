@@ -41,8 +41,8 @@ describe('QueryResolver', () => {
     const otherMatcher = new DocumentMatcher({ do: 'match' });
     resolver.add('a', matcher);
     resolver.add('b', otherMatcher);
-    expect(resolver.some({ no: 'match' })).toBeFalsy();
-    expect(resolver.some({ do: 'match' })).toBeTruthy();
+    expect(resolver.some({ _id: 'someId', no: 'match' })).toBeFalsy();
+    expect(resolver.some({ _id: 'someId', do: 'match' })).toBeTruthy();
   });
 
   it('gets a list of matched and non-matched matcher', () => {
@@ -55,9 +55,11 @@ describe('QueryResolver', () => {
     resolver.add('b', matcherB);
     resolver.add('c', matcherC);
     resolver.add('d', matcherD);
-    expect(resolver.match({ a: 'exists', c: 'exists' })).toEqual([
-      ['a', 'c'],
-      ['b', 'd'],
-    ]);
+    expect(resolver.match({ _id: 'someId', a: 'exists', c: 'exists' })).toEqual(
+      [
+        ['a', 'c'],
+        ['b', 'd'],
+      ]
+    );
   });
 });

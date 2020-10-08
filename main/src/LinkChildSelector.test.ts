@@ -576,8 +576,8 @@ describe('LinkChildSelector', () => {
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(2);
-    expect(childResolver).toHaveBeenNthCalledWith(1, { group: 'groupA' });
-    expect(childResolver).toHaveBeenNthCalledWith(2, { group: 'groupB' });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocuments[0]);
+    expect(childResolver).toHaveBeenNthCalledWith(2, rootDocuments[1]);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -1018,7 +1018,7 @@ describe('LinkChildSelector', () => {
     root.observe();
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, { group: 'A' });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -1055,7 +1055,7 @@ describe('LinkChildSelector', () => {
     expect(child.added).toHaveBeenNthCalledWith(
       1,
       childDocument._id,
-      {},
+      childDocument,
       expect.anything()
     );
 
@@ -1161,14 +1161,10 @@ describe('LinkChildSelector', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      group: rootDocumentA.group,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(rootResolver).toHaveBeenCalledTimes(1);
-    expect(rootResolver).toHaveBeenNthCalledWith(1, {
-      groups: [rootDocumentA.group, rootDocumentB.group, rootDocumentC.group],
-    });
+    expect(rootResolver).toHaveBeenNthCalledWith(1, childDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -1245,9 +1241,7 @@ describe('LinkChildSelector', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      group: rootDocumentA.group,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -1344,16 +1338,10 @@ describe('LinkChildSelector', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      group: rootDocumentA.group,
-      groups: [childDocumentA.group, childDocumentB.group],
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(childrenResolver).toHaveBeenCalledTimes(1);
-    expect(childrenResolver).toHaveBeenNthCalledWith(1, {
-      group: rootDocumentA.group,
-      groups: [childDocumentA.group, childDocumentB.group],
-    });
+    expect(childrenResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
@@ -1452,25 +1440,13 @@ describe('LinkChildSelector', () => {
     });
 
     expect(childResolver).toHaveBeenCalledTimes(1);
-    expect(childResolver).toHaveBeenNthCalledWith(1, {
-      prop: rootDocument.prop,
-      group: rootDocument.group,
-      grandGroup: rootDocument.grandGroup,
-    });
+    expect(childResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(grandChildResolver).toHaveBeenCalledTimes(1);
-    expect(grandChildResolver).toHaveBeenNthCalledWith(1, {
-      prop: rootDocument.prop,
-      group: rootDocument.group,
-      grandGroup: rootDocument.grandGroup,
-    });
+    expect(grandChildResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
     expect(childToGrandChildResolver).toHaveBeenCalledTimes(1);
-    expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, {
-      prop: childDocument.prop,
-      group: childDocument.group,
-      grandGroup: childDocument.grandGroup,
-    });
+    expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, childDocument);
 
     expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
     expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(

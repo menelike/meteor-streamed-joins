@@ -1,6 +1,5 @@
 import type DocumentMatcher from './DocumentMatcher';
 import type { MongoDoc } from './types';
-import { WithoutId } from './types';
 
 class QueryResolver<T extends MongoDoc = MongoDoc> {
   private readonly matcherMap: Map<string, DocumentMatcher<T>> = new Map();
@@ -19,11 +18,11 @@ class QueryResolver<T extends MongoDoc = MongoDoc> {
     return currentMatcher.isEqual(matcher);
   }
 
-  public some(doc: WithoutId<T>): boolean {
+  public some(doc: T): boolean {
     return [...this.matcherMap.values()].some((matcher) => matcher.match(doc));
   }
 
-  public match(doc: WithoutId<T>): [Array<string>, Array<string>] {
+  public match(doc: T): [Array<string>, Array<string>] {
     const matchedIds: Array<string> = [];
     const nonMatchedIds: Array<string> = [];
 
