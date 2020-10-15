@@ -7,7 +7,7 @@ const Minimongo = global.Package?.minimongo?.Minimongo;
 
 export type Matcher<T extends MongoDoc = MongoDoc> = (
   doc: Partial<T>
-) => boolean;
+) => { result: boolean };
 
 class DocumentMatcher<T extends MongoDoc = MongoDoc> {
   public readonly selector: Mongo.Selector<T>;
@@ -25,7 +25,7 @@ class DocumentMatcher<T extends MongoDoc = MongoDoc> {
   }
 
   public match(doc: Partial<T>): boolean {
-    return this.matcher(doc);
+    return this.matcher(doc).result;
   }
 
   public isEqual(matcher: DocumentMatcher<T>): boolean {

@@ -18,8 +18,8 @@ class Matcher<T extends MongoDoc = MongoDoc> {
   }
 
   public _docMatcher = jest
-    .fn<boolean, [Partial<T>]>()
-    .mockImplementation((doc) => this.matcher(doc));
+    .fn<{ result: boolean }, [Partial<T>]>()
+    .mockImplementation((doc) => ({ result: this.matcher(doc) }));
 }
 
 export const Minimongo = {
