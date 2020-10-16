@@ -435,4 +435,106 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.replaced).toHaveBeenCalledTimes(0);
     expect(listenerMock.removed).toHaveBeenCalledTimes(0);
   });
+
+  it('retrieves dates from database as instances of Date()', async () => {
+    expect.assertions(14);
+
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
+
+    multiplexer.addListener(listenerMock);
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      date: new Date(),
+    };
+    await TestCollection.insertOne(document);
+    await waitUntilHaveBeenCalledTimes(listenerMock.added, 1);
+    expect(listenerMock.added).toHaveBeenCalledTimes(1);
+    expect(listenerMock.added).toHaveBeenNthCalledWith(
+      1,
+      document._id,
+      document,
+      expect.objectContaining({
+        operationType: 'insert',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        fullDocument: document,
+      })
+    );
+    expect(listenerMock.added.mock.calls[0][1].date).toBeInstanceOf(Date);
+    expect(
+      listenerMock.added.mock.calls[0][2].fullDocument.date
+    ).toBeInstanceOf(Date);
+
+    const updatedDate = new Date();
+    await TestCollection.updateOne(
+      { _id: document._id },
+      { $set: { date: updatedDate } }
+    );
+    await waitUntilHaveBeenCalledTimes(listenerMock.changed, 1);
+    expect(listenerMock.changed).toHaveBeenCalledTimes(1);
+    expect(listenerMock.changed).toHaveBeenNthCalledWith(
+      1,
+      document._id,
+      {
+        date: updatedDate,
+      },
+      {
+        _id: document._id,
+        date: updatedDate,
+      },
+      expect.objectContaining({
+        operationType: 'update',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        updateDescription: {
+          updatedFields: { date: updatedDate },
+          removedFields: [],
+        },
+        fullDocument: {
+          _id: document._id,
+          date: updatedDate,
+        },
+      })
+    );
+    expect(listenerMock.changed.mock.calls[0][1].date).toBeInstanceOf(Date);
+    expect(listenerMock.changed.mock.calls[0][2].date).toBeInstanceOf(Date);
+    expect(
+      listenerMock.changed.mock.calls[0][3].updateDescription.updatedFields.date
+    ).toBeInstanceOf(Date);
+    expect(
+      listenerMock.changed.mock.calls[0][3].fullDocument.date
+    ).toBeInstanceOf(Date);
+
+    const replacedDate = new Date();
+    await TestCollection.replaceOne(
+      { _id: document._id },
+      { date: replacedDate }
+    );
+    await waitUntilHaveBeenCalledTimes(listenerMock.replaced, 1);
+    expect(listenerMock.replaced).toHaveBeenCalledTimes(1);
+    expect(listenerMock.replaced).toHaveBeenNthCalledWith(
+      1,
+      document._id,
+      {
+        _id: document._id,
+        date: replacedDate,
+      },
+      expect.objectContaining({
+        operationType: 'replace',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        fullDocument: {
+          _id: document._id,
+          date: replacedDate,
+        },
+      })
+    );
+    expect(listenerMock.replaced.mock.calls[0][1].date).toBeInstanceOf(Date);
+    expect(
+      listenerMock.replaced.mock.calls[0][2].fullDocument.date
+    ).toBeInstanceOf(Date);
+  });
 });

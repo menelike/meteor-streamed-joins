@@ -1,5 +1,4 @@
 // @ts-ignore
-import EJSON from 'ejson';
 import type {
   ChangeEventCR,
   ChangeEventDelete,
@@ -136,22 +135,20 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
 
       this.onChanged(
         _id,
-        EJSON.parse(JSON.stringify(convertDottedToObject<Partial<T>>(fields))),
-        EJSON.parse(
-          JSON.stringify(convertDottedToObject<T>(next.fullDocument))
-        ),
+        convertDottedToObject<Partial<T>>(fields),
+        next.fullDocument,
         next
       );
     } else if (next.operationType === 'replace') {
       const { fullDocument } = next;
       if (fullDocument) {
-        this.onReplaced(_id, EJSON.parse(JSON.stringify(fullDocument)), next);
+        this.onReplaced(_id, fullDocument, next);
       } else {
         throw Error('received replace OP without a full document');
       }
     } else if (next.operationType === 'insert') {
       const { fullDocument } = next;
-      this.onInserted(_id, EJSON.parse(JSON.stringify(fullDocument)), next);
+      this.onInserted(_id, fullDocument, next);
     } else if (next.operationType === 'delete') {
       this.onRemoved(_id, next);
     }
