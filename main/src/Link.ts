@@ -11,7 +11,8 @@ import type {
 } from './LinkChildSelector';
 import { LinkChildSelector } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
-import type { MongoDoc, WithoutId } from './types';
+import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import { objectIdToString } from './utils/idGeneration';
 
 type Options = {
   fields?: RootBaseOptions['fields'];
@@ -39,20 +40,22 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     this.matcher = new DocumentMatcher<T>(selector);
   }
 
-  private added = (_id: string, doc: T): void => {
+  private added = (_id: StringOrObjectID, doc: T): void => {
     if (!this.matcher.match(doc)) return;
-    this.publicationContext.addToRegistry(_id, [_id]);
-    this.publicationContext.added(_id, this.filterFields(doc));
+    const stringId = objectIdToString(_id);
+    this.publicationContext.addToRegistry(stringId, [stringId]);
+    this.publicationContext.added(stringId, this.filterFields(doc));
     this.children.parentAdded(_id, doc);
     if (!this.firstRun) this.children.commit();
   };
 
   private changed = (
-    _id: string,
+    _id: StringOrObjectID,
     fields: Partial<WithoutId<T>>,
     doc: T
   ): void => {
-    const hasForeignKey = this.publicationContext.hasChildId(_id);
+    const stringId = objectIdToString(_id);
+    const hasForeignKey = this.publicationContext.hasChildId(stringId);
     const match = this.matcher.match(doc);
 
     if (match && !hasForeignKey) {
@@ -65,13 +68,14 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
       return;
     }
 
-    this.publicationContext.changed(_id, this.filterFields(fields));
+    this.publicationContext.changed(stringId, this.filterFields(fields));
     this.children.parentChanged(_id, doc);
     this.children.commit();
   };
 
-  private replaced = (_id: string, doc: T): void => {
-    const hasForeignKey = this.publicationContext.hasChildId(_id);
+  private replaced = (_id: StringOrObjectID, doc: T): void => {
+    const stringId = objectIdToString(_id);
+    const hasForeignKey = this.publicationContext.hasChildId(stringId);
     const match = this.matcher.match(doc);
 
     if (match && !hasForeignKey) {
@@ -84,15 +88,16 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
       return;
     }
 
-    this.publicationContext.replaced(_id, this.filterFields(doc));
+    this.publicationContext.replaced(stringId, this.filterFields(doc));
     this.children.parentChanged(_id, doc);
     this.children.commit();
   };
 
-  private removed = (_id: string): void => {
-    if (!this.publicationContext.hasChildId(_id)) return;
-    this.publicationContext.removeFromRegistry(_id);
-    this.publicationContext.removed(_id);
+  private removed = (_id: StringOrObjectID): void => {
+    const stringId = objectIdToString(_id);
+    if (!this.publicationContext.hasChildId(stringId)) return;
+    this.publicationContext.removeFromRegistry(stringId);
+    this.publicationContext.removed(stringId);
     this.children.parentRemoved(_id);
     this.children.commit();
   };

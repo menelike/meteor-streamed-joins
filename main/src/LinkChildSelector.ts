@@ -7,7 +7,8 @@ import { LinkChild } from './LinkChild';
 import type { ExtractPrimaryKeys, LinkChildOptions } from './LinkChild';
 import type { MeteorPublicationContext } from './PublicationContext';
 import QueryResolver from './QueryResolver';
-import type { MongoDoc, WithoutId } from './types';
+import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import { objectIdToString } from './utils/idGeneration';
 
 export type LinkChildSelectorOptions = {
   fields?: ChildBaseOptions['fields'];
@@ -25,7 +26,7 @@ type ParentAdded<
 > = {
   type: 'parentAdded';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
     doc: P;
     matcher: DocumentMatcher<T>;
   };
@@ -37,7 +38,7 @@ type ParentChanged<
 > = {
   type: 'parentChanged';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
     doc: P;
     matcher: DocumentMatcher<T>;
   };
@@ -46,14 +47,14 @@ type ParentChanged<
 type ParentRemoved = {
   type: 'parentRemoved';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
   };
 };
 
 type Added<T extends MongoDoc = MongoDoc> = {
   type: 'added';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -61,7 +62,7 @@ type Added<T extends MongoDoc = MongoDoc> = {
 type Changed<T extends MongoDoc = MongoDoc> = {
   type: 'changed';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     fields: Partial<WithoutId<T>>;
     doc: T;
   };
@@ -70,7 +71,7 @@ type Changed<T extends MongoDoc = MongoDoc> = {
 type Replaced<T extends MongoDoc = MongoDoc> = {
   type: 'replaced';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -78,7 +79,7 @@ type Replaced<T extends MongoDoc = MongoDoc> = {
 type Removed = {
   type: 'removed';
   payload: {
-    id: string;
+    id: StringOrObjectID;
   };
 };
 
@@ -137,23 +138,31 @@ export class LinkChildSelector<
       switch (q.type) {
         case 'parentAdded':
         case 'parentChanged': {
-          if (this.queryResolver.has(q.payload.sourceId, q.payload.matcher))
+          if (
+            this.queryResolver.has(
+              objectIdToString(q.payload.sourceId),
+              q.payload.matcher
+            )
+          )
             break;
-          selectors.set(q.payload.sourceId, q.payload.matcher.selector);
+          selectors.set(
+            objectIdToString(q.payload.sourceId),
+            q.payload.matcher.selector
+          );
           break;
         }
         case 'parentRemoved': {
-          selectors.delete(q.payload.sourceId);
+          selectors.delete(objectIdToString(q.payload.sourceId));
           break;
         }
         case 'added':
         case 'changed':
         case 'replaced': {
-          this.queueDocs[q.payload.id] = q.payload.doc;
+          this.queueDocs[objectIdToString(q.payload.id)] = q.payload.doc;
           break;
         }
         case 'removed': {
-          delete this.queueDocs[q.payload.id];
+          delete this.queueDocs[objectIdToString(q.payload.id)];
           break;
         }
         /* istanbul ignore next */
@@ -170,37 +179,55 @@ export class LinkChildSelector<
           }
         )
         .forEach((doc) => {
-          this.queueDocs[doc._id] = doc;
+          this.queueDocs[objectIdToString(doc._id)] = doc;
         });
     }
 
     queue.forEach((q) => {
       switch (q.type) {
         case 'parentAdded': {
-          this.queryResolver.add(q.payload.sourceId, q.payload.matcher);
+          this.queryResolver.add(
+            objectIdToString(q.payload.sourceId),
+            q.payload.matcher
+          );
           const keys = Object.values(this.queueDocs)
             .filter((doc) => q.payload.matcher.match(doc))
             .map((doc) => doc._id);
-          this.publicationContext.addToRegistry(q.payload.sourceId, keys);
+          this.publicationContext.addToRegistry(
+            objectIdToString(q.payload.sourceId),
+            keys.map((key) => objectIdToString(key))
+          );
           break;
         }
         case 'parentChanged': {
           // don't do anything if the parent has returned an equal matcher
-          if (this.queryResolver.has(q.payload.sourceId, q.payload.matcher))
+          if (
+            this.queryResolver.has(
+              objectIdToString(q.payload.sourceId),
+              q.payload.matcher
+            )
+          )
             break;
-          this.queryResolver.add(q.payload.sourceId, q.payload.matcher);
+          this.queryResolver.add(
+            objectIdToString(q.payload.sourceId),
+            q.payload.matcher
+          );
           const keys = Object.values(this.queueDocs)
             .filter((doc) => q.payload.matcher.match(doc))
             .map((doc) => doc._id);
           this.publicationContext.replaceFromRegistry(
-            q.payload.sourceId,
-            keys || /* istanbul ignore next */ []
+            objectIdToString(q.payload.sourceId),
+            (keys || /* istanbul ignore next */ []).map((key) =>
+              objectIdToString(key)
+            )
           );
           break;
         }
         case 'parentRemoved': {
-          this.queryResolver.delete(q.payload.sourceId);
-          this.publicationContext.removeFromRegistry(q.payload.sourceId);
+          this.queryResolver.delete(objectIdToString(q.payload.sourceId));
+          this.publicationContext.removeFromRegistry(
+            objectIdToString(q.payload.sourceId)
+          );
           break;
         }
         case 'added': {
@@ -208,7 +235,9 @@ export class LinkChildSelector<
           if (!matched.length) return;
           // register this document with every matching source
           matched.forEach((sourceId) => {
-            this.publicationContext.addToRegistry(sourceId, [q.payload.id]);
+            this.publicationContext.addToRegistry(sourceId, [
+              objectIdToString(q.payload.id),
+            ]);
           });
           break;
         }
@@ -225,11 +254,13 @@ export class LinkChildSelector<
 
           // register this child with every matching sourceId
           matched.forEach((sourceId) => {
-            this.publicationContext.addToRegistry(sourceId, [q.payload.id]);
+            this.publicationContext.addToRegistry(sourceId, [
+              objectIdToString(q.payload.id),
+            ]);
           });
 
           this.publicationContext.changed(
-            q.payload.id,
+            objectIdToString(q.payload.id),
             this.filterFields(q.payload.fields)
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
@@ -248,11 +279,13 @@ export class LinkChildSelector<
 
           // register this child with every matching sourceId
           matched.forEach((sourceId) => {
-            this.publicationContext.addToRegistry(sourceId, [q.payload.id]);
+            this.publicationContext.addToRegistry(sourceId, [
+              objectIdToString(q.payload.id),
+            ]);
           });
 
           this.publicationContext.replaced(
-            q.payload.id,
+            objectIdToString(q.payload.id),
             this.filterFields(q.payload.doc)
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
@@ -260,8 +293,13 @@ export class LinkChildSelector<
         }
         case 'removed': {
           // if the child is not present just ignore it
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
-          this.publicationContext.removeChildFromRegistry(q.payload.id);
+          if (
+            !this.publicationContext.hasChildId(objectIdToString(q.payload.id))
+          )
+            break;
+          this.publicationContext.removeChildFromRegistry(
+            objectIdToString(q.payload.id)
+          );
           break;
         }
         /* istanbul ignore next */
@@ -281,11 +319,16 @@ export class LinkChildSelector<
       Object.values(queueDocs).forEach((document) => {
         const { _id, ...doc } = document;
         const docFields = this.filterFields(doc);
-        if (!this.publicationContext.addedChildrenIds.has(_id)) return;
+        if (
+          !this.publicationContext.addedChildrenIds.has(objectIdToString(_id))
+        )
+          return;
         added.push(document);
         // only add the dangling document when this instance is the primary
-        if (this.publicationContext.isPrimaryForChildId(_id)) {
-          this.publicationContext.added(_id, docFields);
+        if (
+          this.publicationContext.isPrimaryForChildId(objectIdToString(_id))
+        ) {
+          this.publicationContext.added(objectIdToString(_id), docFields);
         }
       });
     }
@@ -309,7 +352,7 @@ export class LinkChildSelector<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: P): void => {
+  public parentAdded = (sourceId: StringOrObjectID, doc: P): void => {
     const selector = this.resolver(doc);
 
     if (selector) {
@@ -325,7 +368,7 @@ export class LinkChildSelector<
 
   // handle change from parent
   /** @internal */
-  public parentChanged = (sourceId: string, doc: P): void => {
+  public parentChanged = (sourceId: StringOrObjectID, doc: P): void => {
     const selector = this.resolver(doc);
 
     if (selector) {
@@ -341,7 +384,7 @@ export class LinkChildSelector<
 
   // handle remove from parent
   /** @internal */
-  public parentRemoved = (sourceId: string): void => {
+  public parentRemoved = (sourceId: StringOrObjectID): void => {
     this.queue.push({
       type: 'parentRemoved',
       payload: {
@@ -350,7 +393,7 @@ export class LinkChildSelector<
     });
   };
 
-  private added = (id: string, doc: T): void => {
+  private added = (id: StringOrObjectID, doc: T): void => {
     this.queue.push({
       type: 'added',
       payload: {
@@ -364,11 +407,13 @@ export class LinkChildSelector<
 
   // handle change events from change streams
   private changed = (
-    id: string,
+    id: StringOrObjectID,
     fields: Partial<WithoutId<T>>,
     doc: T
   ): void => {
-    const hasForeignKey = this.publicationContext.hasChildId(id);
+    const hasForeignKey = this.publicationContext.hasChildId(
+      objectIdToString(id)
+    );
     const match = this.queryResolver.some(doc);
     // if there is a match but the key itself does not exist yet
     // it must be a new document
@@ -400,8 +445,10 @@ export class LinkChildSelector<
   };
 
   // handle replace events from change streams
-  private replaced = (id: string, doc: T): void => {
-    const hasForeignKey = this.publicationContext.hasChildId(id);
+  private replaced = (id: StringOrObjectID, doc: T): void => {
+    const hasForeignKey = this.publicationContext.hasChildId(
+      objectIdToString(id)
+    );
     const match = this.queryResolver.some(doc);
 
     // if there is a match but the key itself does not exist yet
@@ -435,7 +482,7 @@ export class LinkChildSelector<
   // removes a child even if still related to the parent
   // which happens when the child is removed before all
   // related parents have been removed, counterpart wise to this.added()
-  private removed = (id: string): void => {
+  private removed = (id: StringOrObjectID): void => {
     this.queue.push({
       type: 'removed',
       payload: {

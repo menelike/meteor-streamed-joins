@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collection } from 'mongodb';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { ObjectID } from 'mongodb';
 
 import MongoMemoryReplSet from '../../tests/MongoMemoryReplSet';

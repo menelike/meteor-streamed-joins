@@ -2,13 +2,15 @@ import type { Mongo } from 'meteor/mongo';
 
 import { ChildBase, ChildBaseOptions } from './base/ChildBase';
 import type { RootBase } from './base/RootBase';
+import Configuration from './Configuration';
 import { LinkChildSelector } from './LinkChildSelector';
 import type {
   ExtractSelector,
   LinkChildSelectorOptions,
 } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
-import type { MongoDoc, WithoutId } from './types';
+import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import { createId, objectIdToString } from './utils/idGeneration';
 
 export type LinkChildOptions = {
   fields?: ChildBaseOptions['fields'];
@@ -17,12 +19,12 @@ export type LinkChildOptions = {
 
 export type ExtractPrimaryKeys<P extends MongoDoc = MongoDoc> = (
   document: P
-) => string[] | undefined;
+) => StringOrObjectID[] | undefined;
 
 type ParentAdded<T extends MongoDoc = MongoDoc> = {
   type: 'parentAdded';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
     doc: T;
   };
 };
@@ -30,7 +32,7 @@ type ParentAdded<T extends MongoDoc = MongoDoc> = {
 type ParentChanged<T extends MongoDoc = MongoDoc> = {
   type: 'parentChanged';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
     doc: T;
   };
 };
@@ -38,14 +40,14 @@ type ParentChanged<T extends MongoDoc = MongoDoc> = {
 type ParentRemoved = {
   type: 'parentRemoved';
   payload: {
-    sourceId: string;
+    sourceId: StringOrObjectID;
   };
 };
 
 type Added<T extends MongoDoc = MongoDoc> = {
   type: 'added';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -53,7 +55,7 @@ type Added<T extends MongoDoc = MongoDoc> = {
 type Changed<T extends MongoDoc = MongoDoc> = {
   type: 'changed';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     fields: Partial<WithoutId<T>>;
     doc: T;
   };
@@ -62,7 +64,7 @@ type Changed<T extends MongoDoc = MongoDoc> = {
 type Replaced<T extends MongoDoc = MongoDoc> = {
   type: 'replaced';
   payload: {
-    id: string;
+    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -70,7 +72,7 @@ type Replaced<T extends MongoDoc = MongoDoc> = {
 type Removed = {
   type: 'removed';
   payload: {
-    id: string;
+    id: StringOrObjectID;
   };
 };
 
@@ -121,7 +123,10 @@ export class LinkChild<
         case 'parentAdded': {
           const keys = this.resolver(q.payload.doc);
           if (keys) {
-            this.publicationContext.addToRegistry(q.payload.sourceId, keys);
+            this.publicationContext.addToRegistry(
+              objectIdToString(q.payload.sourceId),
+              keys.map((key) => objectIdToString(key))
+            );
           }
           break;
         }
@@ -129,48 +134,67 @@ export class LinkChild<
           const keys = this.resolver(q.payload.doc);
 
           this.publicationContext.replaceFromRegistry(
-            q.payload.sourceId,
-            keys || /* istanbul ignore next */ []
+            objectIdToString(q.payload.sourceId),
+            (keys || /* istanbul ignore next */ []).map((key) =>
+              objectIdToString(key)
+            )
           );
           break;
         }
         case 'parentRemoved': {
-          this.publicationContext.removeFromRegistry(q.payload.sourceId);
+          this.publicationContext.removeFromRegistry(
+            objectIdToString(q.payload.sourceId)
+          );
           break;
         }
         case 'added': {
-          if (!this.publicationContext.addedChildrenIds.has(q.payload.id))
+          if (
+            !this.publicationContext.addedChildrenIds.has(
+              objectIdToString(q.payload.id)
+            )
+          )
             break;
 
           this.publicationContext.added(
-            q.payload.id,
+            objectIdToString(q.payload.id),
             this.filterFields(q.payload.doc)
           );
           this.children.parentAdded(q.payload.id, q.payload.doc);
           break;
         }
         case 'changed': {
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
+          if (
+            !this.publicationContext.hasChildId(objectIdToString(q.payload.id))
+          )
+            break;
 
           this.publicationContext.changed(
-            q.payload.id,
+            objectIdToString(q.payload.id),
             this.filterFields(q.payload.fields)
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
           break;
         }
         case 'replaced': {
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
+          if (
+            !this.publicationContext.hasChildId(objectIdToString(q.payload.id))
+          )
+            break;
           this.publicationContext.replaced(
-            q.payload.id,
+            objectIdToString(q.payload.id),
             this.filterFields(q.payload.doc)
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
           break;
         }
         case 'removed': {
-          if (!this.publicationContext.hasChildId(q.payload.id)) break;
-          this.publicationContext.removeChildFromRegistry(q.payload.id);
+          if (
+            !this.publicationContext.hasChildId(objectIdToString(q.payload.id))
+          )
+            break;
+          this.publicationContext.removeChildFromRegistry(
+            objectIdToString(q.payload.id)
+          );
           break;
         }
         /* istanbul ignore next */
@@ -184,17 +208,26 @@ export class LinkChild<
     const added: Array<T> = [];
     const removed: Array<string> = [];
     if (this.publicationContext.addedChildrenIds.size) {
+      const idGeneration = Configuration.idGeneration(
+        this.collection.rawCollection().collectionName
+      );
+      const ids = [...this.publicationContext.addedChildrenIds].map((id) =>
+        createId(idGeneration, id)
+      );
       this.collection
         .find(
           // @ts-ignore
           {
-            _id: { $in: [...this.publicationContext.addedChildrenIds] },
+            _id: { $in: ids },
           }
         )
         .forEach((document) => {
           const { _id, ...doc } = document;
           added.push(document);
-          this.publicationContext.added(_id, this.filterFields(doc));
+          this.publicationContext.added(
+            objectIdToString(_id),
+            this.filterFields(doc)
+          );
         });
     }
     if (this.publicationContext.removedChildrenIds.size) {
@@ -217,7 +250,7 @@ export class LinkChild<
 
   // handle add from parent
   /** @internal */
-  public parentAdded = (sourceId: string, doc: P): void => {
+  public parentAdded = (sourceId: StringOrObjectID, doc: P): void => {
     this.queue.push({
       type: 'parentAdded',
       payload: { sourceId, doc },
@@ -226,7 +259,7 @@ export class LinkChild<
 
   // handle change from parent
   /** @internal */
-  public parentChanged = (sourceId: string, doc: P): void => {
+  public parentChanged = (sourceId: StringOrObjectID, doc: P): void => {
     this.queue.push({
       type: 'parentChanged',
       payload: { sourceId, doc },
@@ -235,7 +268,7 @@ export class LinkChild<
 
   // handle remove from parent
   /** @internal */
-  public parentRemoved = (sourceId: string): void => {
+  public parentRemoved = (sourceId: StringOrObjectID): void => {
     this.queue.push({
       type: 'parentRemoved',
       payload: {
@@ -248,7 +281,7 @@ export class LinkChild<
   // this is only used in cases where a linked document has been inserted
   // after the related document e.g. the insertion order/foreign key
   // relationship has been broken
-  private added = (id: string, doc: T): void => {
+  private added = (id: StringOrObjectID, doc: T): void => {
     this.queue.push({
       type: 'added',
       payload: {
@@ -262,7 +295,7 @@ export class LinkChild<
 
   // handle change events from change streams
   private changed = (
-    id: string,
+    id: StringOrObjectID,
     fields: Partial<WithoutId<T>>,
     doc: T
   ): void => {
@@ -279,7 +312,7 @@ export class LinkChild<
   };
 
   // handle replace events from change streams
-  private replaced = (id: string, doc: T): void => {
+  private replaced = (id: StringOrObjectID, doc: T): void => {
     this.queue.push({
       type: 'replaced',
       payload: {
@@ -294,7 +327,7 @@ export class LinkChild<
   // removes a child even if still related to the parent
   // which happens when the child is removed before all
   // related parents have been removed, counterpart wise to this.added()
-  private removed = (id: string): void => {
+  private removed = (id: StringOrObjectID): void => {
     this.queue.push({
       type: 'removed',
       payload: {
