@@ -38,14 +38,14 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.11.2",
-    "ejson": "^2.2.0"
+    "ejson": "^2.2.0",
+    "mongodb": "^3.6.2"
   },
   "devDependencies": {
     "@types/meteor": "^1.4.49",
     "@types/mongodb": "^3.5.27",
     "concurrently": "^5.3.0",
     "minimongo": "^6.6.1",
-    "mongodb": "^3.6.2",
     "mongodb-memory-server": "^6.8.0"
   },
   "lint-staged": {

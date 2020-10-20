@@ -1,6 +1,6 @@
 import type { LinkChild } from './LinkChild';
 import type { LinkChildSelector } from './LinkChildSelector';
-import { MongoDoc } from './types';
+import type { MongoDoc, StringOrObjectID } from './types';
 
 class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
   private readonly children: Set<
@@ -14,19 +14,19 @@ class ChildDeMultiplexer<P extends MongoDoc = MongoDoc> {
     this.children.add(linkChild);
   };
 
-  public parentAdded = (parentId: string, parentDoc: P): void => {
+  public parentAdded = (parentId: StringOrObjectID, parentDoc: P): void => {
     this.children.forEach((child) => {
       child.parentAdded(parentId, parentDoc);
     });
   };
 
-  public parentChanged = (_id: string, doc: P): void => {
+  public parentChanged = (_id: StringOrObjectID, doc: P): void => {
     this.children.forEach((child) => {
       child.parentChanged(_id, doc);
     });
   };
 
-  public parentRemoved = (parentId: string): void => {
+  public parentRemoved = (parentId: StringOrObjectID): void => {
     this.children.forEach((child) => {
       child.parentRemoved(parentId);
     });

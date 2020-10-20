@@ -7,7 +7,12 @@ import type {
   Collection,
 } from 'mongodb';
 
-import type { ChangeStreamCallBacks, MongoDoc, WithoutId } from '../types';
+import type {
+  ChangeStreamCallBacks,
+  MongoDoc,
+  WithoutId,
+  StringOrObjectID,
+} from '../types';
 import convertDottedToObject from '../utils/convertDottedToObject';
 
 const bindEnvironment =
@@ -94,14 +99,18 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     }
   }
 
-  private onInserted = (_id: string, fields: T, op: ChangeEventCR<T>): void => {
+  private onInserted = (
+    _id: StringOrObjectID,
+    fields: T,
+    op: ChangeEventCR<T>
+  ): void => {
     this.listeners.forEach((listener) => {
       listener.added(_id, fields, op);
     });
   };
 
   private onChanged = (
-    _id: string,
+    _id: StringOrObjectID,
     fields: Partial<WithoutId<T>>,
     doc: T,
     op: ChangeEventUpdate<T>
@@ -111,13 +120,20 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     });
   };
 
-  private onReplaced = (_id: string, doc: T, op: ChangeEventCR<T>): void => {
+  private onReplaced = (
+    _id: StringOrObjectID,
+    doc: T,
+    op: ChangeEventCR<T>
+  ): void => {
     this.listeners.forEach((listener) => {
       listener.replaced(_id, doc, op);
     });
   };
 
-  private onRemoved = (_id: string, op: ChangeEventDelete<T>): void => {
+  private onRemoved = (
+    _id: StringOrObjectID,
+    op: ChangeEventDelete<T>
+  ): void => {
     this.listeners.forEach((listener) => {
       listener.removed(_id, op);
     });
