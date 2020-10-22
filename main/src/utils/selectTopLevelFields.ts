@@ -1,4 +1,5 @@
-import type { FullDocumentChangeEventUpdate } from '../changeStream/ChangeStreamMultiplexer';
+import type { ChangeEventUpdate } from 'mongodb';
+
 import { WithoutId, MongoDoc } from '../types';
 
 /*
@@ -27,10 +28,8 @@ and is not supported by the official MongoDB drivers.
 */
 
 const selectTopLevelFields = <T extends MongoDoc = MongoDoc>(
-  fields: FullDocumentChangeEventUpdate<
-    T
-  >['updateDescription']['updatedFields'],
-  fullDocument: FullDocumentChangeEventUpdate<T>['fullDocument']
+  fields: ChangeEventUpdate<T>['updateDescription']['updatedFields'],
+  fullDocument: T
 ): Partial<WithoutId<T>> => {
   const doc: Partial<WithoutId<T>> = {};
 

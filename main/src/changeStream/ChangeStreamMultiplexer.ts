@@ -19,20 +19,6 @@ const bindEnvironment =
   // eslint-disable-next-line @typescript-eslint/ban-types
   global.Meteor?.bindEnvironment || (<T = Function>(func: T): T => func);
 
-export interface FullDocumentChangeEventUpdate<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSchema extends { [key: string]: any } = any
-> extends ChangeEventUpdate<TSchema> {
-  fullDocument: TSchema;
-}
-
-export interface FullDocumentChangeEventCR<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  TSchema extends { [key: string]: any } = any
-> extends ChangeEventCR<TSchema> {
-  fullDocument: TSchema;
-}
-
 const STATIC_AGGREGATION_PIPELINE = [
   {
     $match: {
@@ -46,9 +32,9 @@ const STATIC_AGGREGATION_PIPELINE = [
   },
 ];
 
-type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
-  | FullDocumentChangeEventCR<T>
-  | FullDocumentChangeEventUpdate<T>
+type ChangeEventMeteor<T> =
+  | ChangeEventUpdate<T>
+  | ChangeEventCR<T>
   | ChangeEventDelete<T>;
 
 type Options = {
@@ -139,9 +125,14 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     });
   };
 
+  // if the fullDocument is not present on insert/update/replace
+  // it must have been removed in the meantime, so do nothing
+  // and wait for the delete event to happen
   private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
     if (next.operationType === 'update') {
+      const { fullDocument } = next;
+      if (!fullDocument) return;
       const { updatedFields: fields, removedFields } = next.updateDescription;
       // mongo doesn't support undefined
       // otherwise this could have been done in the aggregation pipeline
@@ -151,19 +142,21 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
 
       this.onChanged(
         _id,
-        selectTopLevelFields<T>(fields, next.fullDocument),
-        next.fullDocument,
+        selectTopLevelFields<T>(fields, fullDocument),
+        fullDocument,
         next
       );
     } else if (next.operationType === 'replace') {
       const { fullDocument } = next;
-      if (fullDocument) {
-        this.onReplaced(_id, fullDocument, next);
-      } else {
-        throw Error('received replace OP without a full document');
-      }
+      // this should never happen per spec, but might happen by type
+      if (!fullDocument) return;
+
+      this.onReplaced(_id, fullDocument, next);
     } else if (next.operationType === 'insert') {
       const { fullDocument } = next;
+      // this should never happen per spec, but might happen by type
+      if (!fullDocument) return;
+
       this.onInserted(_id, fullDocument, next);
     } else if (next.operationType === 'delete') {
       this.onRemoved(_id, next);
