@@ -13,20 +13,20 @@ import type {
   WithoutId,
   StringOrObjectID,
 } from '../types';
-import convertDottedToObject from '../utils/convertDottedToObject';
+import selectTopLevelFields from '../utils/selectTopLevelFields';
 
 const bindEnvironment =
   // eslint-disable-next-line @typescript-eslint/ban-types
   global.Meteor?.bindEnvironment || (<T = Function>(func: T): T => func);
 
-interface FullDocumentChangeEventUpdate<
+export interface FullDocumentChangeEventUpdate<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TSchema extends { [key: string]: any } = any
 > extends ChangeEventUpdate<TSchema> {
   fullDocument: TSchema;
 }
 
-interface FullDocumentChangeEventCR<
+export interface FullDocumentChangeEventCR<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TSchema extends { [key: string]: any } = any
 > extends ChangeEventCR<TSchema> {
@@ -46,7 +46,7 @@ const STATIC_AGGREGATION_PIPELINE = [
   },
 ];
 
-export type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
+type ChangeEventMeteor<T extends MongoDoc = MongoDoc> =
   | FullDocumentChangeEventCR<T>
   | FullDocumentChangeEventUpdate<T>
   | ChangeEventDelete<T>;
@@ -151,7 +151,7 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
 
       this.onChanged(
         _id,
-        convertDottedToObject<Partial<T>>(fields),
+        selectTopLevelFields<T>(fields, next.fullDocument),
         next.fullDocument,
         next
       );

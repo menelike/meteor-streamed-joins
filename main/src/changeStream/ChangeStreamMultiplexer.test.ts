@@ -536,4 +536,113 @@ describe('ChangeStreamMultiplexer', () => {
       listenerMock.replaced.mock.calls[0][2].fullDocument.date
     ).toBeInstanceOf(Date);
   });
+
+  it('updates array', async () => {
+    expect.assertions(6);
+
+    multiplexer = new ChangeStreamMultiplexer(TestCollection);
+
+    multiplexer.addListener(listenerMock);
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      values: [{ v: 1 }],
+    };
+    await TestCollection.insertOne(document);
+
+    await TestCollection.updateOne(
+      { _id: document._id },
+      { $push: { values: { v: 2 } } }
+    );
+    await waitUntilHaveBeenCalledTimes(listenerMock.changed, 1);
+    expect(listenerMock.changed).toHaveBeenCalledTimes(1);
+    expect(listenerMock.changed).toHaveBeenNthCalledWith(
+      1,
+      document._id,
+      {
+        values: [{ v: 1 }, { v: 2 }],
+      },
+      {
+        _id: document._id,
+        values: [{ v: 1 }, { v: 2 }],
+      },
+      expect.objectContaining({
+        operationType: 'update',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        updateDescription: {
+          updatedFields: { 'values.1': { v: 2 } },
+          removedFields: [],
+        },
+        fullDocument: {
+          _id: document._id,
+          values: [{ v: 1 }, { v: 2 }],
+        },
+      })
+    );
+
+    await TestCollection.updateOne(
+      { _id: document._id, 'values.v': 1 },
+      { $set: { 'values.$.v': 3 } }
+    );
+    await waitUntilHaveBeenCalledTimes(listenerMock.changed, 2);
+    expect(listenerMock.changed).toHaveBeenCalledTimes(2);
+    expect(listenerMock.changed).toHaveBeenNthCalledWith(
+      2,
+      document._id,
+      {
+        values: [{ v: 3 }, { v: 2 }],
+      },
+      {
+        _id: document._id,
+        values: [{ v: 3 }, { v: 2 }],
+      },
+      expect.objectContaining({
+        operationType: 'update',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        updateDescription: {
+          updatedFields: { 'values.0.v': 3 },
+          removedFields: [],
+        },
+        fullDocument: {
+          _id: document._id,
+          values: [{ v: 3 }, { v: 2 }],
+        },
+      })
+    );
+
+    await TestCollection.updateOne(
+      { _id: document._id },
+      { $pull: { values: { v: 3 } } }
+    );
+    await waitUntilHaveBeenCalledTimes(listenerMock.changed, 3);
+    expect(listenerMock.changed).toHaveBeenCalledTimes(3);
+    expect(listenerMock.changed).toHaveBeenNthCalledWith(
+      3,
+      document._id,
+      {
+        values: [{ v: 2 }],
+      },
+      {
+        _id: document._id,
+        values: [{ v: 2 }],
+      },
+      expect.objectContaining({
+        operationType: 'update',
+        ns: { db: 'undefined', coll: 'test' },
+        documentKey: { _id: document._id },
+        updateDescription: {
+          updatedFields: { values: [{ v: 2 }] },
+          removedFields: [],
+        },
+        fullDocument: {
+          _id: document._id,
+          values: [{ v: 2 }],
+        },
+      })
+    );
+  });
 });
