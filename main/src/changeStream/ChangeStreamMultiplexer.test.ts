@@ -407,32 +407,47 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.removed).toHaveBeenCalledTimes(0);
   });
 
-  it('receives undefined fullDocument on replace', async () => {
-    expect.assertions(5);
+  it('missing full document on insert/update/replace', () => {
+    expect.assertions(3);
 
     multiplexer = new ChangeStreamMultiplexer(TestCollection);
     multiplexer.addListener(listenerMock);
 
-    await sleep(DEFAULT_WAIT_IN_MS);
-
     const _id = new ObjectID().toHexString();
 
-    expect(() => {
-      // @ts-ignore
-      multiplexer.onChange({
-        // @ts-ignore
-        operationType: 'replace',
-        documentKey: {
-          _id,
-        },
-        // @ts-ignore
-        fullDocument: undefined,
-      });
-    }).toThrowError('received replace OP without a full document');
+    // @ts-ignore
+    multiplexer.onChange({
+      operationType: 'insert',
+      documentKey: {
+        _id,
+      },
+      fullDocument: undefined,
+    });
     expect(listenerMock.added).toHaveBeenCalledTimes(0);
+
+    // @ts-ignore
+    multiplexer.onChange({
+      operationType: 'update',
+      documentKey: {
+        _id,
+      },
+      updateDescription: {
+        updatedFields: { foo: 'bar' },
+        removedFields: [],
+      },
+      fullDocument: undefined,
+    });
     expect(listenerMock.changed).toHaveBeenCalledTimes(0);
+
+    // @ts-ignore
+    multiplexer.onChange({
+      operationType: 'replace',
+      documentKey: {
+        _id,
+      },
+      fullDocument: undefined,
+    });
     expect(listenerMock.replaced).toHaveBeenCalledTimes(0);
-    expect(listenerMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('retrieves dates from database as instances of Date()', async () => {
