@@ -35,7 +35,7 @@ export class RootBase<T extends MongoDoc = MongoDoc> extends LinkCommon<T> {
     super(context, collection, { fields: options?.fields });
     this.publicationContext = new PublicationContext(
       context,
-      collection.rawCollection().collectionName,
+      this.collectionName,
       {
         skipPublication: options?.skipPublication,
       }

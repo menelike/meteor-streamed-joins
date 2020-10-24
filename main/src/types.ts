@@ -29,7 +29,6 @@ export interface ChangeStreamCallBacks<T extends MongoDoc = MongoDoc> {
   ): void;
   changed(
     _id: StringOrObjectID,
-    fields: Partial<WithoutId<T>>,
     doc: WithoutId<T>,
     op: ChangeEventUpdate<T>
   ): void;

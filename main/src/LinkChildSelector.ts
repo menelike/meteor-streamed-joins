@@ -7,7 +7,7 @@ import { LinkChild } from './LinkChild';
 import type { ExtractPrimaryKeys, LinkChildOptions } from './LinkChild';
 import type { MeteorPublicationContext } from './PublicationContext';
 import QueryResolver from './QueryResolver';
-import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import type { MongoDoc, StringOrObjectID } from './types';
 import { objectIdToString } from './utils/idGeneration';
 
 export type LinkChildSelectorOptions = {
@@ -63,15 +63,6 @@ type Changed<T extends MongoDoc = MongoDoc> = {
   type: 'changed';
   payload: {
     id: StringOrObjectID;
-    fields: Partial<WithoutId<T>>;
-    doc: T;
-  };
-};
-
-type Replaced<T extends MongoDoc = MongoDoc> = {
-  type: 'replaced';
-  payload: {
-    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -92,7 +83,6 @@ type Queue<
   | ParentRemoved
   | Added<T>
   | Changed<T>
-  | Replaced<T>
   | Removed
 >;
 
@@ -156,8 +146,7 @@ export class LinkChildSelector<
           break;
         }
         case 'added':
-        case 'changed':
-        case 'replaced': {
+        case 'changed': {
           this.queueDocs[objectIdToString(q.payload.id)] = q.payload.doc;
           break;
         }
@@ -259,34 +248,13 @@ export class LinkChildSelector<
             ]);
           });
 
+          const diffedFields = this.diffDocumentWithPublished(
+            objectIdToString(q.payload.id),
+            q.payload.doc
+          );
           this.publicationContext.changed(
             objectIdToString(q.payload.id),
-            this.filterFields(q.payload.fields)
-          );
-          this.children.parentChanged(q.payload.id, q.payload.doc);
-          break;
-        }
-        case 'replaced': {
-          const [matched, nonMatched] = this.queryResolver.match(q.payload.doc);
-          if (nonMatched.length) {
-            // otherwise remove it for every sourceId which doesn't match
-            // we don't care if the child is registered for that source
-            // let the registry handle those cases
-            nonMatched.forEach((sourceId) => {
-              this.publicationContext.removeFromRegistry(sourceId);
-            });
-          }
-
-          // register this child with every matching sourceId
-          matched.forEach((sourceId) => {
-            this.publicationContext.addToRegistry(sourceId, [
-              objectIdToString(q.payload.id),
-            ]);
-          });
-
-          this.publicationContext.replaced(
-            objectIdToString(q.payload.id),
-            this.filterFields(q.payload.doc)
+            diffedFields
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
           break;
@@ -406,11 +374,7 @@ export class LinkChildSelector<
   };
 
   // handle change events from change streams
-  private changed = (
-    id: StringOrObjectID,
-    fields: Partial<WithoutId<T>>,
-    doc: T
-  ): void => {
+  private changed = (id: StringOrObjectID, doc: T): void => {
     const hasForeignKey = this.publicationContext.hasChildId(
       objectIdToString(id)
     );
@@ -436,7 +400,6 @@ export class LinkChildSelector<
       type: 'changed',
       payload: {
         id,
-        fields,
         doc,
       },
     });
@@ -446,37 +409,7 @@ export class LinkChildSelector<
 
   // handle replace events from change streams
   private replaced = (id: StringOrObjectID, doc: T): void => {
-    const hasForeignKey = this.publicationContext.hasChildId(
-      objectIdToString(id)
-    );
-    const match = this.queryResolver.some(doc);
-
-    // if there is a match but the key itself does not exist yet
-    // it must be a new document
-    if (match && !hasForeignKey) {
-      this.added(id, doc);
-      return;
-    }
-
-    // if it did not exist it can does not need to be removed or replaced
-    if (!hasForeignKey) return;
-
-    // if it does not match to any selector it must be removed
-    if (!match) {
-      this.removed(id);
-      return;
-    }
-
-    // the document has existed before and matches so it must be an update
-    this.queue.push({
-      type: 'replaced',
-      payload: {
-        id,
-        doc,
-      },
-    });
-    this.commit();
-    this.flush();
+    this.changed(id, doc);
   };
 
   // removes a child even if still related to the parent

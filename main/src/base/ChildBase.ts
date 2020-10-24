@@ -35,11 +35,10 @@ export class ChildBase<
     super(context, collection, { fields: options?.fields });
     this.parent = parent;
 
-    const { collectionName } = collection.rawCollection();
-    const existingForeignKeyRegistry = this.root().getNode(collectionName);
+    const existingForeignKeyRegistry = this.root().getNode(this.collectionName);
     this.publicationContext = new PublicationContext(
       context,
-      collection.rawCollection().collectionName,
+      this.collectionName,
       {
         foreignKeyRegistry:
           existingForeignKeyRegistry?.publicationContext.foreignKeyRegistry,

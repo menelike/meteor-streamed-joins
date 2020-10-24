@@ -33,6 +33,8 @@ let RootCollectionMock: Mongo.Collection<any>;
 let ChildCollectionMock: Mongo.Collection<any>;
 let GrandChildCollectionMock: Mongo.Collection<any>;
 
+const meteorPublicationMock = new MeteorPublicationMock();
+
 beforeAll(async () => {
   await mongoDB.connect();
   RootCollection = await mongoDB.db().createCollection(COLLECTION_NAME_ROOT);
@@ -64,6 +66,7 @@ afterEach(async () => {
   await db.collection(COLLECTION_NAME_CHILD).deleteMany({});
   await db.collection(COLLECTION_NAME_GRANDCHILD).deleteMany({});
 
+  meteorPublicationMock.stop();
   jest.clearAllMocks();
 });
 
@@ -75,7 +78,7 @@ describe('LinkChild', () => {
   it('resolves root from children', () => {
     expect.assertions(2);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     child = root.link(ChildCollectionMock, () => undefined);
 
@@ -100,7 +103,7 @@ describe('LinkChild', () => {
     ];
     await RootCollection.insertMany(rootDocuments);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -111,26 +114,26 @@ describe('LinkChild', () => {
     expect(childResolver).toHaveBeenNthCalledWith(1, rootDocuments[0]);
     expect(childResolver).toHaveBeenNthCalledWith(2, rootDocuments[1]);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(4);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocuments[0]._id,
       { child: childDocuments[0]._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_ROOT,
       rootDocuments[1]._id,
       { child: childDocuments[1]._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_CHILD,
       childDocuments[0]._id,
       { prop: 'A' }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       4,
       COLLECTION_NAME_CHILD,
       childDocuments[1]._id,
@@ -151,7 +154,7 @@ describe('LinkChild', () => {
     await RootCollection.insertOne(rootDocument);
 
     root = new Link(
-      MeteorPublicationMock,
+      meteorPublicationMock,
       RootCollectionMock,
       {},
       { skipPublication: false }
@@ -164,14 +167,14 @@ describe('LinkChild', () => {
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
       { child: childDocument._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
@@ -182,7 +185,7 @@ describe('LinkChild', () => {
     await child.stop();
 
     root = new Link(
-      MeteorPublicationMock,
+      meteorPublicationMock,
       RootCollectionMock,
       {},
       { skipPublication: false }
@@ -193,8 +196,8 @@ describe('LinkChild', () => {
     });
 
     root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
@@ -216,7 +219,7 @@ describe('LinkChild', () => {
     await RootCollection.insertOne(rootDocument);
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -227,15 +230,15 @@ describe('LinkChild', () => {
 
     await RootCollection.deleteOne({ _id: rootDocument._id });
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 2);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 2);
 
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id
     );
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id
@@ -257,7 +260,7 @@ describe('LinkChild', () => {
     await RootCollection.insertOne(rootDocument);
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -271,10 +274,10 @@ describe('LinkChild', () => {
       { $set: { prop: 'changed' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.changed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
       childDocument._id,
@@ -283,12 +286,13 @@ describe('LinkChild', () => {
   });
 
   it('calls removed/added on child document replace', async () => {
-    expect.assertions(5);
+    expect.assertions(3);
 
     const childDocument = {
       _id: new ObjectID().toHexString(),
       prop: 'A',
       something: 'else',
+      toBeRemoved: true,
     };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
@@ -297,13 +301,13 @@ describe('LinkChild', () => {
     await RootCollection.insertOne(rootDocument);
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
 
     root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
@@ -312,20 +316,14 @@ describe('LinkChild', () => {
       { prop: 'changed', something: 'different' }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
-      childDocument._id
-    );
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
-      3,
-      COLLECTION_NAME_CHILD,
       childDocument._id,
-      { prop: 'changed', something: 'different' }
+      { prop: 'changed', something: 'different', toBeRemoved: undefined }
     );
   });
 
@@ -345,7 +343,7 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocument);
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver, {
@@ -361,10 +359,10 @@ describe('LinkChild', () => {
       { $set: { prop: 'changed', something: 'different' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.changed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
       childDocument._id,
@@ -373,12 +371,13 @@ describe('LinkChild', () => {
   });
 
   it('filters fields on replaced child document', async () => {
-    expect.assertions(6);
+    expect.assertions(3);
 
     const childDocument = {
       _id: new ObjectID().toHexString(),
       prop: 'A',
       something: 'else',
+      toBeRemoved: true,
     };
     const rootDocument = {
       _id: new ObjectID().toHexString(),
@@ -388,16 +387,16 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocument);
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver, {
-      fields: { prop: 1 },
+      fields: { prop: 1, toBeRemoved: 1 },
     });
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
@@ -406,21 +405,14 @@ describe('LinkChild', () => {
       { prop: 'changed', something: 'differentAgain' }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
-      childDocument._id
-    );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
-      3,
-      COLLECTION_NAME_CHILD,
       childDocument._id,
-      { prop: 'changed' }
+      { prop: 'changed', toBeRemoved: undefined }
     );
   });
 
@@ -446,7 +438,7 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocumentB);
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver, {
@@ -468,13 +460,13 @@ describe('LinkChild', () => {
       { $set: { prop: 'changed' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
   });
 
   it('ignores replace on unrelated child document', async () => {
-    expect.assertions(4);
+    expect.assertions(2);
 
     const childDocumentA = {
       _id: new ObjectID().toHexString(),
@@ -495,7 +487,7 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocumentB);
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver, {
@@ -504,7 +496,7 @@ describe('LinkChild', () => {
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
@@ -519,11 +511,8 @@ describe('LinkChild', () => {
       { prop: 'changed' }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
-
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
   });
 
   it('ignores unresolved children keys', async () => {
@@ -535,7 +524,7 @@ describe('LinkChild', () => {
     };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.link(ChildCollectionMock, childResolver);
@@ -545,8 +534,8 @@ describe('LinkChild', () => {
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, rootDocument);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
@@ -559,7 +548,7 @@ describe('LinkChild', () => {
 
     const childDocument = { _id: new ObjectID().toHexString() };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.link(ChildCollectionMock, childResolver);
@@ -584,7 +573,7 @@ describe('LinkChild', () => {
       expect.anything()
     );
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(0);
   });
 
   it('ignores children document remove', async () => {
@@ -593,7 +582,7 @@ describe('LinkChild', () => {
     const childDocument = { _id: new ObjectID().toHexString() };
     await ChildCollection.insertOne(childDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation(() => undefined);
     child = root.link(ChildCollectionMock, childResolver);
@@ -617,7 +606,7 @@ describe('LinkChild', () => {
       expect.anything()
     );
 
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('child resolves back to root', async () => {
@@ -639,7 +628,7 @@ describe('LinkChild', () => {
       child: childDocument._id,
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       child: { $exists: true },
     });
 
@@ -658,7 +647,7 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocument);
     await RootCollection.insertOne(rootDocumentA);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 4);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 4);
 
     expect(RootCollectionMock.find).toHaveBeenCalledTimes(2);
     expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
@@ -679,26 +668,26 @@ describe('LinkChild', () => {
     expect(rootResolver).toHaveBeenCalledTimes(1);
     expect(rootResolver).toHaveBeenNthCalledWith(1, childDocument);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(4);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(4);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
       { child: childDocument._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
       { roots: [rootDocumentB._id, rootDocumentC._id, rootDocumentA._id] }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_ROOT,
       rootDocumentB._id,
       {}
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       4,
       COLLECTION_NAME_ROOT,
       rootDocumentC._id,
@@ -722,7 +711,7 @@ describe('LinkChild', () => {
       child: childDocumentA._id,
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       child: { $exists: true },
     });
 
@@ -739,7 +728,7 @@ describe('LinkChild', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 2);
 
     expect(RootCollectionMock.find).toHaveBeenCalledTimes(1);
     expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
@@ -754,14 +743,14 @@ describe('LinkChild', () => {
     expect(childResolver).toHaveBeenCalledTimes(1);
     expect(childResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
       { child: childDocumentA._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocumentA._id,
@@ -774,21 +763,21 @@ describe('LinkChild', () => {
       { $set: { child: childDocumentB._id } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 3);
 
     expect(ChildCollectionMock.find).toHaveBeenCalledTimes(2);
     expect(ChildCollectionMock.find).toHaveBeenNthCalledWith(2, {
       _id: { $in: [childDocumentB._id] },
     });
 
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
       childDocumentA._id
     );
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_CHILD,
       childDocumentB._id,
@@ -813,7 +802,7 @@ describe('LinkChild', () => {
       children: [childDocumentA._id, childDocumentB._id],
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       child: { $exists: true },
     });
 
@@ -835,7 +824,7 @@ describe('LinkChild', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 3);
 
     expect(RootCollectionMock.find).toHaveBeenCalledTimes(1);
     expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
@@ -853,8 +842,8 @@ describe('LinkChild', () => {
     expect(childrenResolver).toHaveBeenCalledTimes(1);
     expect(childrenResolver).toHaveBeenNthCalledWith(1, rootDocumentA);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocumentA._id,
@@ -863,13 +852,13 @@ describe('LinkChild', () => {
         children: [childDocumentA._id, childDocumentB._id],
       }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocumentA._id,
       { prop: 'A' }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_CHILD,
       childDocumentB._id,
@@ -896,7 +885,7 @@ describe('LinkChild', () => {
       grandChild: grandChildDocument._id,
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       child: { $exists: true },
     });
 
@@ -927,7 +916,7 @@ describe('LinkChild', () => {
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 3);
 
     expect(RootCollectionMock.find).toHaveBeenCalledTimes(1);
     expect(RootCollectionMock.find).toHaveBeenNthCalledWith(1, {
@@ -953,8 +942,8 @@ describe('LinkChild', () => {
     expect(childToGrandChildResolver).toHaveBeenCalledTimes(1);
     expect(childToGrandChildResolver).toHaveBeenNthCalledWith(1, childDocument);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
@@ -963,13 +952,13 @@ describe('LinkChild', () => {
         grandChild: grandChildDocument._id,
       }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
       { grandChild: grandChildDocument._id }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       3,
       COLLECTION_NAME_GRANDCHILD,
       grandChildDocument._id,
@@ -989,7 +978,7 @@ describe('LinkChild', () => {
     };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -1003,16 +992,16 @@ describe('LinkChild', () => {
 
     await ChildCollection.insertOne(childDocument);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 2);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
       { child: childDocument._id }
     );
 
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
@@ -1030,7 +1019,7 @@ describe('LinkChild', () => {
     };
     await RootCollection.insertOne(rootDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -1059,19 +1048,19 @@ describe('LinkChild', () => {
 
     await ChildCollection.insertOne(childDocument);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 2);
 
     expect(childSpy).toHaveBeenCalledTimes(1);
     expect(grandChildSpy).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocument._id,
       { child: childDocument._id }
     );
 
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_CHILD,
       childDocument._id,
@@ -1092,7 +1081,7 @@ describe('LinkChild', () => {
     await ChildCollection.insertOne(childDocument);
     await ChildCollection.insertOne(unrelatedChildDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const childResolver = jest.fn().mockImplementation((doc) => [doc.child]);
     child = root.link(ChildCollectionMock, childResolver);
@@ -1107,9 +1096,9 @@ describe('LinkChild', () => {
     await ChildCollection.deleteOne({ _id: unrelatedChildDocument._id });
     await ChildCollection.deleteOne({ _id: childDocument._id });
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 1);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_CHILD,
       childDocument._id
@@ -1135,7 +1124,7 @@ describe('LinkChild', () => {
     };
     await GrandChildCollection.insertOne(grandChildDocument);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     child = root.link(ChildCollectionMock, (doc) => [doc.child]);
 
@@ -1147,7 +1136,7 @@ describe('LinkChild', () => {
 
     root.observe();
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 3);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(3);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 3);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
   });
 });

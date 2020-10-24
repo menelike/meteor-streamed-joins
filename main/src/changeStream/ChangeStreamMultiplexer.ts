@@ -10,10 +10,8 @@ import type {
 import type {
   ChangeStreamCallBacks,
   MongoDoc,
-  WithoutId,
   StringOrObjectID,
 } from '../types';
-import selectTopLevelFields from '../utils/selectTopLevelFields';
 
 const bindEnvironment =
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -97,12 +95,11 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
 
   private onChanged = (
     _id: StringOrObjectID,
-    fields: Partial<WithoutId<T>>,
     doc: T,
     op: ChangeEventUpdate<T>
   ): void => {
     this.listeners.forEach((listener) => {
-      listener.changed(_id, fields, doc, op);
+      listener.changed(_id, doc, op);
     });
   };
 
@@ -125,27 +122,16 @@ class ChangeStreamMultiplexer<T extends MongoDoc = MongoDoc> {
     });
   };
 
-  // if the fullDocument is not present on insert/update/replace
-  // it must have been removed in the meantime, so do nothing
-  // and wait for the delete event to happen
   private onChange = (next: ChangeEventMeteor<T>): void => {
     const { _id } = next.documentKey;
     if (next.operationType === 'update') {
       const { fullDocument } = next;
+      // if the fullDocument is not present on insert/update/replace
+      // it must have been removed in the meantime, so do nothing
+      // and wait for the delete event to happen
       if (!fullDocument) return;
-      const { updatedFields: fields, removedFields } = next.updateDescription;
-      // mongo doesn't support undefined
-      // otherwise this could have been done in the aggregation pipeline
-      removedFields.forEach((f) => {
-        fields[f] = undefined;
-      });
 
-      this.onChanged(
-        _id,
-        selectTopLevelFields<T>(fields, fullDocument),
-        fullDocument,
-        next
-      );
+      this.onChanged(_id, fullDocument, next);
     } else if (next.operationType === 'replace') {
       const { fullDocument } = next;
       // this should never happen per spec, but might happen by type

@@ -11,7 +11,7 @@ import type {
 } from './LinkChildSelector';
 import { LinkChildSelector } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
-import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import type { MongoDoc, StringOrObjectID } from './types';
 import { objectIdToString } from './utils/idGeneration';
 
 type Options = {
@@ -49,11 +49,7 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
     if (!this.firstRun) this.children.commit();
   };
 
-  private changed = (
-    _id: StringOrObjectID,
-    fields: Partial<WithoutId<T>>,
-    doc: T
-  ): void => {
+  private changed = (_id: StringOrObjectID, doc: T): void => {
     const stringId = objectIdToString(_id);
     const hasForeignKey = this.publicationContext.hasChildId(stringId);
     const match = this.matcher.match(doc);
@@ -68,29 +64,14 @@ class Link<T extends MongoDoc = MongoDoc> extends RootBase<T> {
       return;
     }
 
-    this.publicationContext.changed(stringId, this.filterFields(fields));
+    const diffedFields = this.diffDocumentWithPublished(stringId, doc);
+    this.publicationContext.changed(stringId, diffedFields);
     this.children.parentChanged(_id, doc);
     this.children.commit();
   };
 
   private replaced = (_id: StringOrObjectID, doc: T): void => {
-    const stringId = objectIdToString(_id);
-    const hasForeignKey = this.publicationContext.hasChildId(stringId);
-    const match = this.matcher.match(doc);
-
-    if (match && !hasForeignKey) {
-      this.added(_id, doc);
-      return;
-    }
-    if (!hasForeignKey) return;
-    if (!match) {
-      this.removed(_id);
-      return;
-    }
-
-    this.publicationContext.replaced(stringId, this.filterFields(doc));
-    this.children.parentChanged(_id, doc);
-    this.children.commit();
+    this.changed(_id, doc);
   };
 
   private removed = (_id: StringOrObjectID): void => {
