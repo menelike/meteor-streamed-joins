@@ -12,7 +12,7 @@ describe('getNestedProp', () => {
           },
         },
       })
-    ).toEqual([true, 1]);
+    ).toStrictEqual([true, 1]);
 
     expect(
       getNestedProp(['a', 'b', 'd'], {
@@ -22,16 +22,19 @@ describe('getNestedProp', () => {
           },
         },
       })
-    ).toEqual([false, undefined]);
+    ).toStrictEqual([false, undefined]);
 
     expect(
       getNestedProp(['a', 'b'], {
         a: true,
       })
-    ).toEqual([false, undefined]);
+    ).toStrictEqual([false, undefined]);
 
     // @ts-ignore
-    expect(getNestedProp(['a', 'b'], undefined)).toEqual([false, undefined]);
+    expect(getNestedProp(['a', 'b'], undefined)).toStrictEqual([
+      false,
+      undefined,
+    ]);
 
     expect(
       getNestedProp(['a', 'b'], {
@@ -41,7 +44,7 @@ describe('getNestedProp', () => {
           },
         },
       })
-    ).toEqual([true, { c: 1 }]);
+    ).toStrictEqual([true, { c: 1 }]);
 
     expect(
       getNestedProp([], {
@@ -51,6 +54,6 @@ describe('getNestedProp', () => {
           },
         },
       })
-    ).toEqual([false, undefined]);
+    ).toStrictEqual([false, undefined]);
   });
 });

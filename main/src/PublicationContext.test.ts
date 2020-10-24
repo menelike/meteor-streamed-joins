@@ -22,10 +22,10 @@ describe('PublicationContext', () => {
     );
 
     context.addToRegistry('key', ['a']);
-    expect(context.addedChildrenIds).toEqual(new Set('a'));
+    expect(context.addedChildrenIds).toStrictEqual(new Set('a'));
     context.addedChildrenIds.delete('a');
     context.removeFromRegistry('key');
-    expect(context.removedChildrenIds).toEqual(new Set('a'));
+    expect(context.removedChildrenIds).toStrictEqual(new Set('a'));
   });
 
   it('sets foreignKeyRegistry as arg', () => {
@@ -57,14 +57,14 @@ describe('PublicationContext', () => {
     expect(meteorPublicationMock.added).toHaveBeenCalledTimes(0);
     expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
     expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(0);
-    expect(context.addedChildrenIds).toEqual(new Set());
-    expect(context.removedChildrenIds).toEqual(new Set());
+    expect(context.addedChildrenIds).toStrictEqual(new Set());
+    expect(context.removedChildrenIds).toStrictEqual(new Set());
     expect(context.hasChildId('foreignKeyA')).toBeFalsy();
 
     context.addToRegistry('testSource', ['foreignKeyA']);
     expect(context.hasChildId('foreignKeyA')).toBeTruthy();
-    expect(context.addedChildrenIds).toEqual(new Set(['foreignKeyA']));
-    expect(context.removedChildrenIds).toEqual(new Set());
+    expect(context.addedChildrenIds).toStrictEqual(new Set(['foreignKeyA']));
+    expect(context.removedChildrenIds).toStrictEqual(new Set());
 
     const doc = {};
     context.added('foreignKeyA', doc);
@@ -177,7 +177,7 @@ describe('PublicationContext', () => {
     ).toBeTruthy();
 
     context.removeFromRegistry('testSource');
-    expect(context.removedChildrenIds).toEqual(new Set(['foreignKeyA']));
+    expect(context.removedChildrenIds).toStrictEqual(new Set(['foreignKeyA']));
 
     context.removed('foreignKeyA');
     expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);

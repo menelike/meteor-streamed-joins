@@ -53,7 +53,7 @@ describe('filterFields', () => {
           fieldB: 2,
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       fieldA: 1,
       fieldB: 2,
     });
@@ -66,7 +66,7 @@ describe('filterFields', () => {
           fieldB: 2,
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       fieldA: 1,
     });
 
@@ -78,7 +78,7 @@ describe('filterFields', () => {
           fieldB: 2,
         }
       )
-    ).toEqual({});
+    ).toStrictEqual({});
 
     expect(
       filterFields(
@@ -87,7 +87,7 @@ describe('filterFields', () => {
           nested: { FieldA: 1, FieldB: 2 },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: { FieldA: 1, FieldB: 2 },
     });
 
@@ -98,7 +98,7 @@ describe('filterFields', () => {
           nested: { FieldA: 1, FieldB: 2 },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: { FieldA: 1 },
     });
 
@@ -109,7 +109,7 @@ describe('filterFields', () => {
           nested: { FieldAB: 1 },
         }
       )
-    ).toEqual({});
+    ).toStrictEqual({});
 
     expect(
       filterFields(
@@ -118,7 +118,7 @@ describe('filterFields', () => {
           nested: { FieldA: { foo: 1 } },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: { FieldA: { foo: 1 } },
     });
   });
@@ -134,7 +134,7 @@ describe('filterFields', () => {
           fieldB: 2,
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       fieldB: 2,
     });
 
@@ -146,7 +146,7 @@ describe('filterFields', () => {
           fieldB: 2,
         }
       )
-    ).toEqual({});
+    ).toStrictEqual({});
 
     expect(
       filterFields(
@@ -158,7 +158,7 @@ describe('filterFields', () => {
           },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: {
         FieldB: 2,
       },
@@ -174,7 +174,7 @@ describe('filterFields', () => {
           },
         }
       )
-    ).toEqual({});
+    ).toStrictEqual({});
 
     expect(
       filterFields(
@@ -183,7 +183,7 @@ describe('filterFields', () => {
           nested: { FieldAB: 1 },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: {
         FieldAB: 1,
       },
@@ -196,7 +196,7 @@ describe('filterFields', () => {
           nested: { FieldA: { foo: 1 }, FieldB: { bar: 1 } },
         }
       )
-    ).toEqual({
+    ).toStrictEqual({
       nested: { FieldB: { bar: 1 } },
     });
   });

@@ -23,12 +23,12 @@ describe('ForeignKeyRegistry', () => {
 
     const registry = new ForeignKeyRegistry();
     registry.add('testId', 'testSourceId', ['a']);
-    expect(registry.added).toEqual(new Set(['a']));
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set(['a']));
+    expect(registry.removed).toStrictEqual(new Set());
     registry.commitAdded('a');
     registry.add('testId', 'testSourceId', ['a']);
-    expect(registry.added).toEqual(new Set());
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set());
   });
 
   it('has childId', () => {
@@ -64,8 +64,8 @@ describe('ForeignKeyRegistry', () => {
     expect(registry.hasChildId('testId', 'b')).toBeTruthy();
     expect(registry.hasChildId('testId', 'c')).toBeTruthy();
 
-    expect(registry.added).toEqual(new Set(['a', 'b', 'c']));
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set(['a', 'b', 'c']));
+    expect(registry.removed).toStrictEqual(new Set());
   });
 
   it('diffs when replaced', () => {
@@ -85,13 +85,13 @@ describe('ForeignKeyRegistry', () => {
     expect(registry.hasChildId('testId', 'c')).toBeTruthy();
     expect(registry.hasChildId('testId', 'd')).toBeTruthy();
 
-    expect(registry.added).toEqual(new Set(['d']));
-    expect(registry.removed).toEqual(new Set(['b']));
+    expect(registry.added).toStrictEqual(new Set(['d']));
+    expect(registry.removed).toStrictEqual(new Set(['b']));
     registry.commitAdded('d');
     registry.commitRemoved('b');
     registry.replace('testId', 'sourceIdA', ['a', 'c', 'd']);
-    expect(registry.added).toEqual(new Set([]));
-    expect(registry.removed).toEqual(new Set([]));
+    expect(registry.added).toStrictEqual(new Set([]));
+    expect(registry.removed).toStrictEqual(new Set([]));
   });
 
   it('removed from deleted when added after', () => {
@@ -101,11 +101,11 @@ describe('ForeignKeyRegistry', () => {
     registry.add('testId', 'sourceIdA', ['a']);
     registry.commitAdded('a');
     registry.remove('testId', 'sourceIdA');
-    expect(registry.added).toEqual(new Set());
-    expect(registry.removed).toEqual(new Set(['a']));
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set(['a']));
     registry.add('testId', 'sourceIdA', ['a']);
-    expect(registry.added).toEqual(new Set());
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set());
   });
 
   it('do not cause changes when add, change and remove happen in one phase', () => {
@@ -115,8 +115,8 @@ describe('ForeignKeyRegistry', () => {
     registry.add('testId', 'sourceIdA', ['a', 'b', 'c']);
     registry.replace('testId', 'sourceIdA', ['a', 'b', 'd']);
     registry.remove('testId', 'sourceIdA');
-    expect(registry.added).toEqual(new Set());
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set());
   });
 
   it('keeps multiple references to the same childId from different parents', () => {
@@ -127,16 +127,16 @@ describe('ForeignKeyRegistry', () => {
     registry.add('testIdB', 'sourceIdA', ['a']);
     expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
     expect(registry.hasChildId('testIdB', 'a')).toBeTruthy();
-    expect(registry.added).toEqual(new Set(['a']));
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set(['a']));
+    expect(registry.removed).toStrictEqual(new Set());
     registry.remove('testIdA', 'sourceIdA');
-    expect(registry.added).toEqual(new Set(['a']));
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set(['a']));
+    expect(registry.removed).toStrictEqual(new Set());
     expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
     expect(registry.hasChildId('testIdB', 'a')).toBeTruthy();
     registry.remove('testIdB', 'sourceIdA');
-    expect(registry.added).toEqual(new Set());
-    expect(registry.removed).toEqual(new Set());
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set());
     expect(registry.hasChildId('testIdB', 'a')).toBeFalsy();
   });
 

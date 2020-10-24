@@ -6,7 +6,7 @@ describe('setNestedProp', () => {
 
     let doc = {};
     setNestedProp(['a', 'b', 'c'], doc, 1);
-    expect(doc).toEqual({
+    expect(doc).toStrictEqual({
       a: {
         b: {
           c: 1,
@@ -22,7 +22,7 @@ describe('setNestedProp', () => {
       },
     };
     setNestedProp(['a', 'b', 'c'], doc, 2);
-    expect(doc).toEqual({
+    expect(doc).toStrictEqual({
       a: {
         b: {
           c: 2,
@@ -38,7 +38,7 @@ describe('setNestedProp', () => {
       },
     };
     setNestedProp(['a', 'b', 'd'], doc, 1);
-    expect(doc).toEqual({
+    expect(doc).toStrictEqual({
       a: {
         b: {
           c: 1,

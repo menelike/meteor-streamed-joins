@@ -6,12 +6,12 @@ describe('deleteNestedProp', () => {
 
     let doc = {};
     deleteNestedProp(['a', 'b', 'c'], doc);
-    expect(doc).toEqual({});
+    expect(doc).toStrictEqual({});
 
     // @ts-ignore
     doc = undefined;
     deleteNestedProp(['a', 'b', 'c'], doc);
-    expect(doc).toEqual(undefined);
+    expect(doc).toStrictEqual(undefined);
 
     doc = {
       a: {
@@ -21,7 +21,7 @@ describe('deleteNestedProp', () => {
       },
     };
     deleteNestedProp(['a', 'b', 'c'], doc);
-    expect(doc).toEqual({
+    expect(doc).toStrictEqual({
       a: {
         b: {},
       },
@@ -36,7 +36,7 @@ describe('deleteNestedProp', () => {
       },
     };
     deleteNestedProp(['a', 'b', 'c'], doc);
-    expect(doc).toEqual({
+    expect(doc).toStrictEqual({
       a: {
         b: {
           d: 1,

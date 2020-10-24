@@ -7,7 +7,7 @@ describe('index', () => {
     // @ts-ignore
     global.Package.minimongo = undefined;
 
-    await expect(import('./index')).rejects.toEqual(
+    await expect(import('./index')).rejects.toStrictEqual(
       Error('meteor/minimongo is missing')
     );
 

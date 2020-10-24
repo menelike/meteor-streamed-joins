@@ -55,11 +55,11 @@ describe('QueryResolver', () => {
     resolver.add('b', matcherB);
     resolver.add('c', matcherC);
     resolver.add('d', matcherD);
-    expect(resolver.match({ _id: 'someId', a: 'exists', c: 'exists' })).toEqual(
-      [
-        ['a', 'c'],
-        ['b', 'd'],
-      ]
-    );
+    expect(
+      resolver.match({ _id: 'someId', a: 'exists', c: 'exists' })
+    ).toStrictEqual([
+      ['a', 'c'],
+      ['b', 'd'],
+    ]);
   });
 });
