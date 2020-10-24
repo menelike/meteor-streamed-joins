@@ -22,6 +22,8 @@ let RootCollection: Collection<any>;
 
 let RootCollectionMock: Mongo.Collection<any>;
 
+const meteorPublicationMock = new MeteorPublicationMock();
+
 beforeAll(async () => {
   await mongoDB.connect();
   RootCollection = await mongoDB.db().createCollection(COLLECTION_NAME_ROOT);
@@ -35,6 +37,7 @@ afterEach(async () => {
     await root.stop();
     root = undefined;
   }
+  meteorPublicationMock.stop();
   jest.clearAllMocks();
 });
 
@@ -48,7 +51,7 @@ describe('Link', () => {
 
     let onStopFunc: (() => Promise<void>) | undefined;
     const publicationMock = {
-      ...MeteorPublicationMock,
+      ...meteorPublicationMock,
       onStop: jest
         .fn()
         .mockImplementation((func: () => Promise<void>): void => {
@@ -74,7 +77,7 @@ describe('Link', () => {
   it('resolves root from root', () => {
     expect.assertions(1);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     expect(root.root()).toBe(root);
   });
@@ -89,18 +92,18 @@ describe('Link', () => {
 
     await RootCollection.insertMany(rootDocuments);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       rootDocuments[0]._id,
       { child: 'childA' }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_ROOT,
       rootDocuments[1]._id,
@@ -114,7 +117,7 @@ describe('Link', () => {
     await RootCollection.insertOne({ _id: new ObjectID().toHexString() });
 
     root = new Link(
-      MeteorPublicationMock,
+      meteorPublicationMock,
       RootCollectionMock,
       {},
       { skipPublication: true }
@@ -122,12 +125,12 @@ describe('Link', () => {
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await root.stop();
 
     root = new Link(
-      MeteorPublicationMock,
+      meteorPublicationMock,
       RootCollectionMock,
       {},
       { skipPublication: false }
@@ -135,13 +138,13 @@ describe('Link', () => {
 
     root.observe();
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
   });
 
   it('calls added on document insert', async () => {
     expect.assertions(3);
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
 
     const document = {
       _id: new ObjectID().toHexString(),
@@ -149,16 +152,16 @@ describe('Link', () => {
     };
 
     root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.insertOne(document);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       document._id,
@@ -175,24 +178,24 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.insertOne(document);
 
-    root.observe();
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-
-    await sleep(DEFAULT_WAIT_IN_MS);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
 
     await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'changed' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.changed, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
 
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.changed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       document._id,
@@ -201,7 +204,7 @@ describe('Link', () => {
   });
 
   it('calls added on non-pre-matched document update', async () => {
-    expect.assertions(4);
+    expect.assertions(3);
 
     const document = {
       _id: new ObjectID().toHexString(),
@@ -209,187 +212,32 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
-
-    await RootCollection.insertOne(document);
-
     root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
+    await RootCollection.insertOne(document);
     await RootCollection.updateOne(
       { _id: document._id },
       { $set: { prop: 'match' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       document._id,
       { prop: 'match', other: 'static' }
     );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
   });
 
   it('calls remove on pre-matched document update', async () => {
-    expect.assertions(4);
-
-    const document = {
-      _id: new ObjectID().toHexString(),
-      prop: 'match',
-      other: 'static',
-    };
-
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
-      prop: 'match',
-    });
-
-    await RootCollection.insertOne(document);
-
-    root.observe();
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
-
-    await sleep(DEFAULT_WAIT_IN_MS);
-
-    await RootCollection.updateOne(
-      { _id: document._id },
-      { $set: { prop: 'nonMatch' } }
-    );
-
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
-
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
-      1,
-      COLLECTION_NAME_ROOT,
-      document._id
-    );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-  });
-
-  it('calls removed/added on pre-matched document replace', async () => {
-    expect.assertions(7);
-
-    const document = {
-      _id: new ObjectID().toHexString(),
-      prop: 'something',
-      other: 'static',
-    };
-
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {});
-
-    await RootCollection.insertOne(document);
-
-    root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
-
-    await sleep(DEFAULT_WAIT_IN_MS);
-
-    await RootCollection.replaceOne(
-      { _id: document._id },
-      { prop: 'changed', other: 'static' }
-    );
-
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
-
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
-      1,
-      COLLECTION_NAME_ROOT,
-      document._id
-    );
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
-      2,
-      COLLECTION_NAME_ROOT,
-      document._id,
-      { prop: 'changed', other: 'static' }
-    );
-  });
-
-  it('calls added on non-pre-matched document replace', async () => {
-    expect.assertions(4);
-
-    const document = {
-      _id: new ObjectID().toHexString(),
-      prop: 'nonMatch',
-      other: 'static',
-    };
-
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
-      prop: 'match',
-    });
-
-    await RootCollection.insertOne(document);
-
-    root.observe();
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
-
-    await sleep(DEFAULT_WAIT_IN_MS);
-
-    await RootCollection.replaceOne(
-      { _id: document._id },
-      { prop: 'match', other: 'static' }
-    );
-
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
-
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
-      1,
-      COLLECTION_NAME_ROOT,
-      document._id,
-      { prop: 'match', other: 'static' }
-    );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-  });
-
-  it('calls remove on pre-matched document replace', async () => {
-    expect.assertions(4);
-
-    const document = {
-      _id: new ObjectID().toHexString(),
-      prop: 'match',
-      other: 'static',
-    };
-
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
-      prop: 'match',
-    });
-
-    await RootCollection.insertOne(document);
-
-    root.observe();
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
-
-    await sleep(DEFAULT_WAIT_IN_MS);
-
-    await RootCollection.replaceOne(
-      { _id: document._id },
-      { prop: 'nonMatch', other: 'static' }
-    );
-
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
-
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
-      1,
-      COLLECTION_NAME_ROOT,
-      document._id
-    );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-  });
-
-  it('calls remove on remove', async () => {
     expect.assertions(3);
 
     const document = {
@@ -398,23 +246,152 @@ describe('Link', () => {
       other: 'static',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
-
-    await RootCollection.insertOne(document);
-
     root.observe();
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
+    await RootCollection.insertOne(document);
+    await RootCollection.updateOne(
+      { _id: document._id },
+      { $set: { prop: 'nonMatch' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 1);
+
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      document._id
+    );
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+  });
+
+  it('calls removed/added on pre-matched document replace', async () => {
+    expect.assertions(2);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      prop: 'something',
+      other: 'static',
+      toBeRemoved: 'remove',
+    };
+
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await RootCollection.insertOne(document);
+    await RootCollection.replaceOne(
+      { _id: document._id },
+      { prop: 'changed', other: 'static' }
+    );
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
+
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.changed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      document._id,
+      { prop: 'changed', toBeRemoved: undefined }
+    );
+  });
+
+  it('calls added on non-pre-matched document replace', async () => {
+    expect.assertions(3);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      prop: 'nonMatch',
+      other: 'static',
+    };
+
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await RootCollection.insertOne(document);
+    await RootCollection.replaceOne(
+      { _id: document._id },
+      { prop: 'match', other: 'static' }
+    );
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
+
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      document._id,
+      { prop: 'match', other: 'static' }
+    );
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+  });
+
+  it('calls remove on pre-matched document replace', async () => {
+    expect.assertions(3);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      prop: 'match',
+      other: 'static',
+    };
+
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await RootCollection.insertOne(document);
+    await RootCollection.replaceOne(
+      { _id: document._id },
+      { prop: 'nonMatch', other: 'static' }
+    );
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 1);
+
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
+      1,
+      COLLECTION_NAME_ROOT,
+      document._id
+    );
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+  });
+
+  it('calls remove on remove', async () => {
+    expect.assertions(2);
+
+    const document = {
+      _id: new ObjectID().toHexString(),
+      prop: 'match',
+      other: 'static',
+    };
+
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
+      prop: 'match',
+    });
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await RootCollection.insertOne(document);
     await RootCollection.deleteOne({ _id: document._id });
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 1);
 
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       document._id
@@ -422,7 +399,7 @@ describe('Link', () => {
   });
 
   it('filters fields', async () => {
-    expect.assertions(4);
+    expect.assertions(3);
 
     const documentA = {
       _id: new ObjectID().toHexString(),
@@ -437,32 +414,29 @@ describe('Link', () => {
     };
 
     root = new Link(
-      MeteorPublicationMock,
+      meteorPublicationMock,
       RootCollectionMock,
       {},
       {
         fields: { prop: 1 },
       }
     );
-
     root.observe();
-
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.insertMany([documentA, documentB]);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 2);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 2);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(2);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(2);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       documentA._id,
       { prop: documentA.prop }
     );
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       2,
       COLLECTION_NAME_ROOT,
       documentB._id,
@@ -471,7 +445,7 @@ describe('Link', () => {
   });
 
   it('ignore unmatched document on added', async () => {
-    expect.assertions(3);
+    expect.assertions(2);
 
     const documentA = {
       _id: new ObjectID().toHexString(),
@@ -483,23 +457,20 @@ describe('Link', () => {
       prop: 'match',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
-
     root.observe();
-
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
     await RootCollection.insertOne(documentA);
     await RootCollection.insertOne(documentB);
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
 
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       documentB._id,
@@ -508,7 +479,7 @@ describe('Link', () => {
   });
 
   it('ignore unmatched document on update', async () => {
-    expect.assertions(5);
+    expect.assertions(4);
 
     const documentA = {
       _id: new ObjectID().toHexString(),
@@ -520,18 +491,15 @@ describe('Link', () => {
       prop: 'nonMatch',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
 
-    await RootCollection.insertMany([documentA, documentB]);
-
     root.observe();
-
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
+    await RootCollection.insertMany([documentA, documentB]);
     await RootCollection.updateOne(
       { _id: documentA._id },
       { $set: { prop: 'stillNonMatch' } }
@@ -542,20 +510,20 @@ describe('Link', () => {
       { $set: { prop: 'match' } }
     );
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       documentB._id,
       { prop: 'match' }
     );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('ignore unmatched document on replace', async () => {
-    expect.assertions(5);
+    expect.assertions(4);
 
     const documentA = {
       _id: new ObjectID().toHexString(),
@@ -567,18 +535,14 @@ describe('Link', () => {
       prop: 'nonMatch',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
-
-    await RootCollection.insertMany([documentA, documentB]);
-
     root.observe();
-
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
+    await RootCollection.insertMany([documentA, documentB]);
     await RootCollection.replaceOne(
       { _id: documentA._id },
       { prop: 'stillNonMatch' }
@@ -586,20 +550,20 @@ describe('Link', () => {
 
     await RootCollection.replaceOne({ _id: documentB._id }, { prop: 'match' });
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.added, 1);
-    expect(MeteorPublicationMock.added).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.added).toHaveBeenNthCalledWith(
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 1);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.added).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       documentB._id,
       { prop: 'match' }
     );
-    expect(MeteorPublicationMock.changed).toHaveBeenCalledTimes(0);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(0);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(0);
   });
 
   it('ignore unmatched document on remove', async () => {
-    expect.assertions(3);
+    expect.assertions(2);
 
     const documentA = {
       _id: new ObjectID().toHexString(),
@@ -611,24 +575,20 @@ describe('Link', () => {
       prop: 'match',
     };
 
-    root = new Link(MeteorPublicationMock, RootCollectionMock, {
+    root = new Link(meteorPublicationMock, RootCollectionMock, {
       prop: 'match',
     });
-
-    await RootCollection.insertMany([documentA, documentB]);
-
     root.observe();
-
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(0);
 
     await sleep(DEFAULT_WAIT_IN_MS);
 
+    await RootCollection.insertMany([documentA, documentB]);
     await RootCollection.deleteOne({ _id: documentA._id });
     await RootCollection.deleteOne({ _id: documentB._id });
 
-    await waitUntilHaveBeenCalledTimes(MeteorPublicationMock.removed, 1);
-    expect(MeteorPublicationMock.removed).toHaveBeenCalledTimes(1);
-    expect(MeteorPublicationMock.removed).toHaveBeenNthCalledWith(
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.removed, 1);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenNthCalledWith(
       1,
       COLLECTION_NAME_ROOT,
       documentB._id

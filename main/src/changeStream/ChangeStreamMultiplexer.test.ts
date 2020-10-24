@@ -178,12 +178,6 @@ describe('ChangeStreamMultiplexer', () => {
       1,
       document._id,
       {
-        name: 'changedFoo',
-        nested: {
-          bar: 'changedTest',
-        },
-      },
-      {
         _id: document._id,
         name: 'changedFoo',
         nested: {
@@ -312,10 +306,6 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.changed).toHaveBeenNthCalledWith(
       1,
       document._id,
-      {
-        name: 'changedFoo',
-        toRemove: undefined,
-      },
       {
         _id: document._id,
         name: 'changedFoo',
@@ -451,7 +441,7 @@ describe('ChangeStreamMultiplexer', () => {
   });
 
   it('retrieves dates from database as instances of Date()', async () => {
-    expect.assertions(14);
+    expect.assertions(13);
 
     multiplexer = new ChangeStreamMultiplexer(TestCollection);
 
@@ -493,9 +483,6 @@ describe('ChangeStreamMultiplexer', () => {
       1,
       document._id,
       {
-        date: updatedDate,
-      },
-      {
         _id: document._id,
         date: updatedDate,
       },
@@ -514,12 +501,11 @@ describe('ChangeStreamMultiplexer', () => {
       })
     );
     expect(listenerMock.changed.mock.calls[0][1].date).toBeInstanceOf(Date);
-    expect(listenerMock.changed.mock.calls[0][2].date).toBeInstanceOf(Date);
     expect(
-      listenerMock.changed.mock.calls[0][3].updateDescription.updatedFields.date
+      listenerMock.changed.mock.calls[0][2].updateDescription.updatedFields.date
     ).toBeInstanceOf(Date);
     expect(
-      listenerMock.changed.mock.calls[0][3].fullDocument.date
+      listenerMock.changed.mock.calls[0][2].fullDocument.date
     ).toBeInstanceOf(Date);
 
     const replacedDate = new Date();
@@ -577,9 +563,6 @@ describe('ChangeStreamMultiplexer', () => {
       1,
       document._id,
       {
-        values: [{ v: 1 }, { v: 2 }],
-      },
-      {
         _id: document._id,
         values: [{ v: 1 }, { v: 2 }],
       },
@@ -608,9 +591,6 @@ describe('ChangeStreamMultiplexer', () => {
       2,
       document._id,
       {
-        values: [{ v: 3 }, { v: 2 }],
-      },
-      {
         _id: document._id,
         values: [{ v: 3 }, { v: 2 }],
       },
@@ -638,9 +618,6 @@ describe('ChangeStreamMultiplexer', () => {
     expect(listenerMock.changed).toHaveBeenNthCalledWith(
       3,
       document._id,
-      {
-        values: [{ v: 2 }],
-      },
       {
         _id: document._id,
         values: [{ v: 2 }],

@@ -9,7 +9,7 @@ import type {
   LinkChildSelectorOptions,
 } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
-import type { MongoDoc, WithoutId, StringOrObjectID } from './types';
+import type { MongoDoc, StringOrObjectID } from './types';
 import { createId, objectIdToString } from './utils/idGeneration';
 
 export type LinkChildOptions = {
@@ -56,15 +56,6 @@ type Changed<T extends MongoDoc = MongoDoc> = {
   type: 'changed';
   payload: {
     id: StringOrObjectID;
-    fields: Partial<WithoutId<T>>;
-    doc: T;
-  };
-};
-
-type Replaced<T extends MongoDoc = MongoDoc> = {
-  type: 'replaced';
-  payload: {
-    id: StringOrObjectID;
     doc: T;
   };
 };
@@ -85,7 +76,6 @@ type Queue<
   | ParentRemoved
   | Added<T>
   | Changed<T>
-  | Replaced<T>
   | Removed
 >;
 
@@ -168,21 +158,13 @@ export class LinkChild<
           )
             break;
 
+          const diffedFields = this.diffDocumentWithPublished(
+            objectIdToString(q.payload.id),
+            q.payload.doc
+          );
           this.publicationContext.changed(
             objectIdToString(q.payload.id),
-            this.filterFields(q.payload.fields)
-          );
-          this.children.parentChanged(q.payload.id, q.payload.doc);
-          break;
-        }
-        case 'replaced': {
-          if (
-            !this.publicationContext.hasChildId(objectIdToString(q.payload.id))
-          )
-            break;
-          this.publicationContext.replaced(
-            objectIdToString(q.payload.id),
-            this.filterFields(q.payload.doc)
+            diffedFields
           );
           this.children.parentChanged(q.payload.id, q.payload.doc);
           break;
@@ -294,16 +276,11 @@ export class LinkChild<
   };
 
   // handle change events from change streams
-  private changed = (
-    id: StringOrObjectID,
-    fields: Partial<WithoutId<T>>,
-    doc: T
-  ): void => {
+  private changed = (id: StringOrObjectID, doc: T): void => {
     this.queue.push({
       type: 'changed',
       payload: {
         id,
-        fields,
         doc,
       },
     });
@@ -313,15 +290,7 @@ export class LinkChild<
 
   // handle replace events from change streams
   private replaced = (id: StringOrObjectID, doc: T): void => {
-    this.queue.push({
-      type: 'replaced',
-      payload: {
-        id,
-        doc,
-      },
-    });
-    this.commit();
-    this.flush();
+    this.changed(id, doc);
   };
 
   // removes a child even if still related to the parent

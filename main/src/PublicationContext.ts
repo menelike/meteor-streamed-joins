@@ -13,6 +13,18 @@ export interface MeteorPublicationContext<T extends MongoDoc = MongoDoc> {
   removed(collection: string, id: string): void;
   stop(): void;
   userId: string | undefined;
+  _subscriptionId?: string;
+  _session?: {
+    collectionViews: Map<
+      string,
+      {
+        documents: Map<
+          string,
+          { existsIn: Set<string>; getFields: () => Partial<WithoutId<T>> }
+        >;
+      }
+    >;
+  };
 }
 
 export type PublicationContextOptions = {
@@ -59,14 +71,6 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     if (!this.isPrimaryForChildId(foreignKey)) return;
     if (this.skipPublication) return;
     this.context.changed(this.collectionName, foreignKey, fields);
-  };
-
-  public replaced = (foreignKey: string, doc: Partial<WithoutId<T>>): void => {
-    if (!this.isPrimaryForChildId(foreignKey)) return;
-    if (this.skipPublication) return;
-    // Todo request/implement replace in meteor publication
-    this.context.removed(this.collectionName, foreignKey);
-    this.context.added(this.collectionName, foreignKey, doc);
   };
 
   public removed = (foreignKey: string): void => {
