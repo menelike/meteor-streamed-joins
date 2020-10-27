@@ -20,7 +20,7 @@ interface MeteorPublicationMockInterface extends MeteorPublicationContext {
   removed: jest.Mock;
   stop: jest.Mock;
   userId: string;
-  _subscriptionId: string;
+  _subscriptionHandle: string;
   _session: {
     collectionViews: Map<
       string,
@@ -52,7 +52,7 @@ class MeteorPublicationMock implements MeteorPublicationMockInterface {
         }
 
         this._session.collectionViews.get(collection).documents.set(id, {
-          existsIn: new Set([this._subscriptionId]),
+          existsIn: new Set([this._subscriptionHandle]),
           getFields: () => doc,
         });
       }
@@ -77,7 +77,7 @@ class MeteorPublicationMock implements MeteorPublicationMockInterface {
         });
 
         this._session.collectionViews.get(collection).documents.set(id, {
-          existsIn: new Set([this._subscriptionId]),
+          existsIn: new Set([this._subscriptionHandle]),
           getFields: () => cleaned,
         });
       }
@@ -115,7 +115,7 @@ class MeteorPublicationMock implements MeteorPublicationMockInterface {
 
   userId = 'testUserId';
 
-  _subscriptionId = 'testSubscription';
+  _subscriptionHandle = 'testSubscription';
 }
 
 export default MeteorPublicationMock;
