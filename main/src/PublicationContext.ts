@@ -13,7 +13,7 @@ export interface MeteorPublicationContext<T extends MongoDoc = MongoDoc> {
   removed(collection: string, id: string): void;
   stop(): void;
   userId: string | undefined;
-  _subscriptionId?: string;
+  _subscriptionHandle?: string;
   _session?: {
     collectionViews: Map<
       string,

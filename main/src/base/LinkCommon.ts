@@ -42,14 +42,14 @@ export class LinkCommon<T extends MongoDoc = MongoDoc> {
 
   private getPublishedDocument = (id: string): Partial<WithoutId<T>> | void => {
     /* istanbul ignore next */
-    if (!this.context._session || !this.context._subscriptionId) {
+    if (!this.context._session || !this.context._subscriptionHandle) {
       throw Error('Meteor subscription context invalid');
     }
     const view = this.context._session.collectionViews.get(this.collectionName);
     if (!view) return undefined;
     const sessionDocumentView = view.documents.get(id);
     if (!sessionDocumentView) return undefined;
-    if (!sessionDocumentView.existsIn.has(this.context._subscriptionId)) {
+    if (!sessionDocumentView.existsIn.has(this.context._subscriptionHandle)) {
       return undefined;
     }
 

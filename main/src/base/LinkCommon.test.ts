@@ -165,7 +165,7 @@ describe('LinkCommon', () => {
     meteorPublicationMock._session.collectionViews
       .get(CollectionName)
       .documents.set('a', {
-        existsIn: new Set(['unknownSubscriptionId']),
+        existsIn: new Set(['unknownSubscriptionHandle']),
         getFields: () => ({
           some: 'value',
         }),
