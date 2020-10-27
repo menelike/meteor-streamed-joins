@@ -47,7 +47,11 @@ export class LinkCommon<T extends MongoDoc = MongoDoc> {
     }
     const view = this.context._session.collectionViews.get(this.collectionName);
     if (!view) return undefined;
-    const sessionDocumentView = view.documents.get(id);
+    // meteor prepends ids if they look like ObjectIds with a dash
+    // this usually happens when the idGeneration is MONGO and not STRING
+    /* istanbul ignore else */
+    const sessionDocumentView =
+      view.documents.get(id) || view.documents.get(`-${id}`);
     if (!sessionDocumentView) return undefined;
     if (!sessionDocumentView.existsIn.has(this.context._subscriptionHandle)) {
       return undefined;
