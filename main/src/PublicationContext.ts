@@ -99,8 +99,11 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
     this.foreignKeyRegistry.replace(this.id, sourceId, foreignKeys);
   }
 
-  public removeFromRegistry(sourceId: string): void {
-    this.foreignKeyRegistry.remove(this.id, sourceId);
+  public removeFromRegistry(
+    sourceId: string,
+    childrenIds?: Array<string> | void
+  ): void {
+    this.foreignKeyRegistry.remove(this.id, sourceId, childrenIds);
   }
 
   public get addedChildrenIds(): Set<string> {

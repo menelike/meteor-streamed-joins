@@ -98,11 +98,32 @@ class ForeignKeyRegistry {
     });
   }
 
-  public remove(id: string, parentId: string): void {
+  public remove(
+    id: string,
+    parentId: string,
+    childrenIds?: Array<string> | void
+  ): void {
     const key = this.assembleKey(id, parentId);
     if (key in this.parentToChildren) {
-      this._remove(id, parentId, [...this.parentToChildren[key]]);
-      delete this.parentToChildren[key];
+      if (childrenIds) {
+        const toRemoveChildren: string[] = [];
+
+        childrenIds.forEach((childId) => {
+          if (this.parentToChildren[key].has(childId)) {
+            toRemoveChildren.push(childId);
+            this.parentToChildren[key].delete(childId);
+          }
+        });
+        if (!toRemoveChildren.length) return;
+
+        this._remove(id, parentId, toRemoveChildren);
+        if (this.parentToChildren[key].size === 0) {
+          delete this.parentToChildren[key];
+        }
+      } else {
+        this._remove(id, parentId, [...this.parentToChildren[key]]);
+        delete this.parentToChildren[key];
+      }
     }
   }
 
