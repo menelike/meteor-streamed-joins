@@ -237,7 +237,9 @@ export class LinkChildSelector<
             // we don't care if the child is registered for that source
             // let the registry handle those cases
             nonMatched.forEach((sourceId) => {
-              this.publicationContext.removeFromRegistry(sourceId);
+              this.publicationContext.removeFromRegistry(sourceId, [
+                objectIdToString(q.payload.id),
+              ]);
             });
           }
 

@@ -1663,4 +1663,54 @@ describe('LinkChildSelector', () => {
     await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 3);
     expect(meteorPublicationMock.added).toHaveBeenCalledTimes(3);
   });
+
+  it('two parents with each one child on update', async () => {
+    expect.assertions(3);
+
+    const rootDocumentA = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+    };
+    const rootDocumentB = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+    };
+    await RootCollection.insertMany([rootDocumentA, rootDocumentB]);
+    const childDocumentA = {
+      _id: new ObjectID().toHexString(),
+      group: 'A',
+      child: 'childA',
+      some: 'value',
+    };
+    const childDocumentB = {
+      _id: new ObjectID().toHexString(),
+      group: 'B',
+      child: 'childB',
+      some: 'value',
+    };
+    await ChildCollection.insertMany([childDocumentA, childDocumentB]);
+
+    root = new Link(meteorPublicationMock, RootCollectionMock, {});
+
+    const childResolver = jest
+      .fn()
+      .mockImplementation((doc) => ({ group: doc.group }));
+    child = root.select(ChildCollectionMock, childResolver);
+
+    root.observe();
+
+    await sleep(DEFAULT_WAIT_IN_MS);
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.added, 4);
+    expect(meteorPublicationMock.added).toHaveBeenCalledTimes(4);
+
+    await ChildCollection.updateOne(
+      { _id: childDocumentA._id },
+      { $set: { some: 'newValue' } }
+    );
+
+    await waitUntilHaveBeenCalledTimes(meteorPublicationMock.changed, 1);
+    expect(meteorPublicationMock.changed).toHaveBeenCalledTimes(1);
+    expect(meteorPublicationMock.removed).toHaveBeenCalledTimes(0);
+  });
 });

@@ -157,7 +157,7 @@ describe('ForeignKeyRegistry', () => {
     expect(registry.isPrimaryForChildId('testIdB', 'a')).toBeTruthy();
   });
 
-  it('removes single child from parent', () => {
+  it('removes single child from all parents', () => {
     expect.assertions(15);
 
     const registry = new ForeignKeyRegistry();
@@ -187,6 +187,40 @@ describe('ForeignKeyRegistry', () => {
 
     registry.removeChild('testIdA', 'b');
     registry.commitRemoved('b');
+    expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeFalsy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeFalsy();
+  });
+
+  it('removes specific child from specific parent', () => {
+    expect.assertions(18);
+
+    const registry = new ForeignKeyRegistry();
+    registry.add('testIdA', 'sourceIdA', ['a', 'b']);
+    registry.commitAdded('a');
+    registry.commitAdded('b');
+
+    expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.remove('testIdA', 'sourceIdA', ['unknown']);
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set());
+    expect(registry.hasChildId('testIdA', 'a')).toBeTruthy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.remove('testIdA', 'sourceIdA', ['a']);
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set(['a']));
+    expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
+    expect(registry.hasChildId('testIdA', 'b')).toBeTruthy();
+    expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeTruthy();
+
+    registry.remove('testIdA', 'sourceIdA', ['b']);
+    expect(registry.added).toStrictEqual(new Set());
+    expect(registry.removed).toStrictEqual(new Set(['a', 'b']));
     expect(registry.hasChildId('testIdA', 'a')).toBeFalsy();
     expect(registry.hasChildId('testIdA', 'b')).toBeFalsy();
     expect(registry.hasParentId('testIdA', 'sourceIdA')).toBeFalsy();
