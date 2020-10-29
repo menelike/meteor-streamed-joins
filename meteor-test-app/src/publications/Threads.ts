@@ -11,6 +11,7 @@ Meteor.publish('threads', function threadsPublication() {
   console.log('threads publication started');
 
   const selector = {};
+  // @ts-ignore
   const root = new Link<ThreadDocument>(this, Threads, selector);
   root.link<Meteor.User>(Meteor.users, (doc) => doc?.userIds);
   root.observe();

@@ -1,9 +1,10 @@
-import type { Meteor } from 'meteor/meteor';
+import type { Meteor, Subscription } from 'meteor/meteor';
 
 import ForeignKeyRegistry from './ForeignKeyRegistry';
 import { MongoDoc, WithoutId } from './types';
 
-export interface MeteorPublicationContext<T extends MongoDoc = MongoDoc> {
+export interface MeteorPublicationContext<T extends MongoDoc = MongoDoc>
+  extends Subscription {
   added(collection: string, id: string, doc: Partial<WithoutId<T>>): void;
   changed(collection: string, id: string, fields: Partial<WithoutId<T>>): void;
   connection: Meteor.Connection;
@@ -12,7 +13,7 @@ export interface MeteorPublicationContext<T extends MongoDoc = MongoDoc> {
   ready(): void;
   removed(collection: string, id: string): void;
   stop(): void;
-  userId: string | undefined;
+  userId: string | null;
   _subscriptionHandle?: string;
   _session?: {
     collectionViews: Map<
@@ -39,7 +40,7 @@ class PublicationContext<T extends MongoDoc = MongoDoc> {
 
   public readonly collectionName: string;
 
-  private readonly context: MeteorPublicationContext<T>;
+  public readonly context: MeteorPublicationContext<T>;
 
   private readonly skipPublication: boolean | undefined;
 

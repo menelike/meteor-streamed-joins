@@ -12,10 +12,7 @@ import type {
   MongoDoc,
   StringOrObjectID,
 } from '../types';
-
-const bindEnvironment =
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  global.Meteor?.bindEnvironment || (<T = Function>(func: T): T => func);
+import bindEnvironment from '../utils/bindEnvironment';
 
 const STATIC_AGGREGATION_PIPELINE = [
   {

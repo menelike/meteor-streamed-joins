@@ -1,3 +1,4 @@
+import type { Subscription } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
 
 import { ChildBase, ChildBaseOptions } from './base/ChildBase';
@@ -8,6 +9,7 @@ import type { ExtractPrimaryKeys, LinkChildOptions } from './LinkChild';
 import type { MeteorPublicationContext } from './PublicationContext';
 import QueryResolver from './QueryResolver';
 import type { MongoDoc, StringOrObjectID } from './types';
+import bindEnvironment from './utils/bindEnvironment';
 import { objectIdToString } from './utils/idGeneration';
 
 export type LinkChildSelectorOptions = {
@@ -18,7 +20,7 @@ export type LinkChildSelectorOptions = {
 export type ExtractSelector<
   P extends MongoDoc = MongoDoc,
   T extends MongoDoc = MongoDoc
-> = (document: P) => Mongo.Selector<T> | undefined;
+> = (this: Subscription, document: P) => Mongo.Selector<T> | undefined;
 
 type ParentAdded<
   P extends MongoDoc = MongoDoc,
@@ -110,7 +112,9 @@ export class LinkChildSelector<
       fields: options?.fields,
       skipPublication: !!options?.skipPublication,
     });
-    this.resolver = resolver;
+    this.resolver = bindEnvironment(
+      resolver.bind(this.publicationContext.context)
+    );
     this.queryResolver = new QueryResolver<T>();
     this.queue = [];
     this.queueDocs = {};
@@ -323,6 +327,7 @@ export class LinkChildSelector<
   // handle add from parent
   /** @internal */
   public parentAdded = (sourceId: StringOrObjectID, doc: P): void => {
+    // @ts-ignore
     const selector = this.resolver(doc);
 
     if (selector) {
@@ -339,6 +344,7 @@ export class LinkChildSelector<
   // handle change from parent
   /** @internal */
   public parentChanged = (sourceId: StringOrObjectID, doc: P): void => {
+    // @ts-ignore
     const selector = this.resolver(doc);
 
     if (selector) {

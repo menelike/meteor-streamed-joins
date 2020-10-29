@@ -1,3 +1,4 @@
+import type { Subscription } from 'meteor/meteor';
 import type { Mongo } from 'meteor/mongo';
 
 import { ChildBase, ChildBaseOptions } from './base/ChildBase';
@@ -10,6 +11,7 @@ import type {
 } from './LinkChildSelector';
 import type { MeteorPublicationContext } from './PublicationContext';
 import type { MongoDoc, StringOrObjectID } from './types';
+import bindEnvironment from './utils/bindEnvironment';
 import { createId, objectIdToString } from './utils/idGeneration';
 
 export type LinkChildOptions = {
@@ -18,6 +20,7 @@ export type LinkChildOptions = {
 };
 
 export type ExtractPrimaryKeys<P extends MongoDoc = MongoDoc> = (
+  this: Subscription,
   document: P
 ) => StringOrObjectID[] | undefined;
 
@@ -99,7 +102,9 @@ export class LinkChild<
       fields: options?.fields,
       skipPublication: !!options?.skipPublication,
     });
-    this.resolver = resolver;
+    this.resolver = bindEnvironment(
+      resolver.bind(this.publicationContext.context)
+    );
     this.queue = [];
   }
 
@@ -111,6 +116,7 @@ export class LinkChild<
     queue.forEach((q) => {
       switch (q.type) {
         case 'parentAdded': {
+          // @ts-ignore
           const keys = this.resolver(q.payload.doc);
           if (keys) {
             this.publicationContext.addToRegistry(
@@ -121,6 +127,7 @@ export class LinkChild<
           break;
         }
         case 'parentChanged': {
+          // @ts-ignore
           const keys = this.resolver(q.payload.doc);
 
           this.publicationContext.replaceFromRegistry(
