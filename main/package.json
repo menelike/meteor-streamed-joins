@@ -42,7 +42,7 @@
     "mongodb": "^3.6.2"
   },
   "devDependencies": {
-    "@types/meteor": "^1.4.49",
+    "@types/meteor": "^1.4.62",
     "@types/mongodb": "^3.5.27",
     "concurrently": "^5.3.0",
     "minimongo": "^6.6.1",
